@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Playbook</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  <link rel="icon" href="/playbook/favicon.ico"/>
+<meta name="theme-color" content="#154C79" />
+<meta name="description" content="Playbook – planera träningar, dela övningar och följ upp matcher." />
+<meta property="og:title" content="Playbook" />
+<meta property="og:description" content="Testa Playbook och säg vad du tycker!" />
+<meta property="og:image" content="/playbook/icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Playbook" />
+<link rel="apple-touch-icon" href="/playbook/icon.png" />
+<link rel="manifest" href="/playbook/manifest.json" />
+<style>
+  body { background: #F3F6F9; }
+  @media (prefers-color-scheme: dark) { body { background: #0C121C; } }
+  /* Laptop / desktop: show the app in a phone-sized frame. */
+  @media (min-width: 700px) and (min-height: 640px) {
+    body { background: radial-gradient(circle at 30% 20%, #2A6FA5 0%, #154C79 45%, #0B2A45 100%); display: flex; align-items: center; justify-content: center; }
+    #root { flex: none !important; width: 400px; height: min(860px, calc(100vh - 48px)) !important; border-radius: 36px; overflow: hidden;
+      box-shadow: 0 0 0 10px #0C121C, 0 0 0 12px rgba(255,255,255,0.08), 0 30px 80px rgba(0,0,0,0.55); transform: translateZ(0); }
+  }
+</style>
+</head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  <script src="/playbook/_expo/static/js/web/index-932324fefbde398f140c1d19b36c2e01.js" defer></script>
+</body>
+</html>

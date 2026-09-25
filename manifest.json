@@ -1,0 +1,19 @@
+{
+  "name": "Playbook",
+  "short_name": "Playbook",
+  "description": "Planera träningar, dela övningar och följ upp matcher.",
+  "lang": "sv",
+  "start_url": "/playbook/",
+  "scope": "/playbook/",
+  "display": "standalone",
+  "background_color": "#154C79",
+  "theme_color": "#154C79",
+  "icons": [
+    {
+      "src": "/playbook/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
