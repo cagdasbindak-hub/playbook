@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#154C79">
+<meta name="description" content="Taktiktavlan – dra ut spelare, flytta dem steg för steg och spela upp övningen.">
+<meta property="og:title" content="Taktiktavlan">
+<meta property="og:description" content="Rita och spela upp fotbollsövningar – testversion från Playbook.">
+<meta property="og:image" content="../icon.png">
+<link rel="apple-touch-icon" href="../icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<!-- A standalone test of a new drawing tool. It does not replace the drawing tool inside Playbook (owner decision 2026-10-02). -->
+<title>Taktiktavlan</title>
+<style>
+/* Layout: one-screen tool — controls stacked at the top (thumb-safe on iPhone), the pitch fills the rest. */
+:root {
+  --bg: #F3F6F9;
+  --surface: #FFFFFF;
+  --surface-alt: #EEF2F6;
+  --text: #172033;
+  --muted: #667085;
+  --line: #D8DEE7;
+  --primary: #154C79;
+  --primary-soft: #EDF5FB;
+  --on-primary: #FFFFFF;
+  --accent: #C2410C;
+  --danger: #B42318;
+  --team: #1F5FAE;
+  --opp: #D23B3B;
+  --keeper: #F2C14E;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C121C; --surface: #141C29; --surface-alt: #1B2535; --text: #E9EEF5; --muted: #A0ABBD;
+    --line: #263247; --primary: #5B9BD5; --primary-soft: #16273D; --on-primary: #0C121C; --accent: #FB923C;
+    --danger: #F97066; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C121C; --surface: #141C29; --surface-alt: #1B2535; --text: #E9EEF5; --muted: #A0ABBD;
+  --line: #263247; --primary: #5B9BD5; --primary-soft: #16273D; --on-primary: #0C121C; --accent: #FB923C;
+  --danger: #F97066; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+.app { height: 100%; display: flex; flex-direction: column; max-width: 1100px; margin: 0 auto; padding-inline: 12px; box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Header */
+.head { display: flex; align-items: center; gap: 8px; padding-block: 10px 6px; }
+.name { flex: 1; min-width: 0; font: 800 18px/1.2 var(--font); color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 6px 8px; text-overflow: ellipsis; }
+.name:hover { border-color: var(--line); }
+.name:focus { border-color: var(--primary); background: var(--surface); outline: none; }
+.ghost { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 14px; white-space: nowrap; }
+.ghost:disabled { opacity: .45; cursor: default; }
+.ghost svg { width: 16px; height: 16px; }
+.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+
+/* Rows */
+.row { display: flex; align-items: center; gap: 8px; padding-block: 4px; }
+.scroll { overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding-block: 2px; touch-action: pan-x; }
+.scroll::-webkit-scrollbar { display: none; }
+.step { flex: none; min-width: 36px; height: 36px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+.step[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.step.add { border-style: dashed; border-color: var(--primary); color: var(--primary); }
+.icon-btn { flex: none; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* Tray of draggable pieces */
+.tray .item { flex: none; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 13px; touch-action: pan-x; }
+.tray .item canvas { width: 24px; height: 24px; pointer-events: none; }
+.tray .item:active { transform: scale(.97); }
+
+.note { width: 100%; box-sizing: border-box; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 0 12px; font: 14px var(--font); -webkit-user-select: text; user-select: text; }
+.note::placeholder { color: var(--muted); }
+
+/* Stage */
+.stage { position: relative; flex: 1; min-height: 240px; margin-block: 6px 14px; }
+canvas#pitch { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+.tip { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: min(92%, 420px); box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0,0,0,.18); display: flex; gap: 10px; align-items: flex-start; }
+.tip b { color: var(--primary); }
+.tip button { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+.caption { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); max-width: 92%; background: rgba(12,18,28,.78); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; text-align: center; pointer-events: none; }
+.caption .k { color: #FFC879; font-variant-numeric: tabular-nums; margin-right: 6px; }
+
+/* Selection bubble */
+.bubble { position: absolute; z-index: 5; display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.22); }
+.bubble button { height: 34px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; font-weight: 700; font-size: 13px; white-space: nowrap; }
+.bubble button:hover { background: var(--surface-alt); }
+.bubble .del { color: var(--danger); }
+.bubble input { width: 46px; height: 34px; box-sizing: border-box; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-alt); color: var(--text); text-align: center; font: 800 15px var(--font); -webkit-user-select: text; user-select: text; }
+
+/* Playback bar */
+.range { flex: 1; min-width: 80px; accent-color: var(--primary); }
+.chip { flex: none; height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.label { flex: none; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+/* Sheets */
+.sheet-back { position: fixed; inset: 0; background: rgba(8,12,20,.45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: min(100%, 560px); max-height: 82%; overflow: auto; background: var(--bg); border-radius: 18px 18px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+.sheet h2 { margin: 2px 0 4px; font-size: 18px; }
+.sheet p.sub { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.card { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.card canvas { width: 100%; aspect-ratio: 105 / 68; border-radius: 8px; display: block; }
+.card b { font-size: 14px; }
+.card span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.list .li { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 8px 10px; }
+.list .li .t { flex: 1; min-width: 0; }
+.list .li .t b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .li .t span { font-size: 12px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 14px; padding: 14px 4px; }
+
+.toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; z-index: 40; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.ghost-drag { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -50%); }
+@media (prefers-reduced-motion: reduce) { .tray .item:active { transform: none; } }
+</style>
+
+<div class="app" id="app">
+  <div class="head">
+    <input class="name" id="name" aria-label="Övningens namn" maxlength="60">
+    <button class="ghost" id="btnTemplates" aria-label="Färdiga upplägg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Upplägg</button>
+    <button class="ghost" id="btnSaved" aria-label="Mina övningar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Mina</button>
+  </div>
+
+  <!-- Edit controls -->
+  <div id="editBar">
+    <div class="row">
+      <div class="scroll" id="steps" role="toolbar" aria-label="Steg"></div>
+      <button class="icon-btn" id="btnUndo" aria-label="Ångra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
+      <button class="icon-btn" id="btnRedo" aria-label="Gör om"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h2"/></svg></button>
+      <button class="ghost primary" id="btnPlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>Spela</button>
+    </div>
+    <div class="row"><div class="scroll tray" id="tray" aria-label="Dra ut till planen"></div></div>
+    <div class="row"><input class="note" id="note" maxlength="140" aria-label="Anteckning för steget"></div>
+  </div>
+
+  <!-- Playback controls -->
+  <div id="playBar" hidden>
+    <div class="row">
+      <button class="icon-btn" id="btnPause" aria-label="Pausa"></button>
+      <input class="range" id="scrub" type="range" min="0" max="1" step="0.001" value="0" aria-label="Tid">
+      <button class="chip" id="btnSpeed" aria-label="Hastighet">1×</button>
+      <button class="chip" id="btnLoop" aria-pressed="true" aria-label="Upprepa">Upprepa</button>
+      <button class="ghost" id="btnEdit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Rita</button>
+    </div>
+    <div class="row">
+      <span class="label">Följ</span>
+      <div class="scroll" id="follow"></div>
+      <button class="ghost" id="btnExport" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Spara</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="pitch" aria-label="Taktiktavla"></canvas>
+    <div class="tip" id="tip" hidden>
+      <div><b>Så här:</b> dra ut spelare från raden ovanför. Tryck <b>+</b> för ett nytt steg och flytta spelare och boll dit de ska – tavlan ritar pilarna själv. Tryck <b>Spela</b> för att se övningen.</div>
+      <button id="tipClose" aria-label="Stäng tipset">×</button>
+    </div>
+    <div class="caption" id="caption" hidden></div>
+    <div class="bubble" id="bubble" hidden></div>
+  </div>
+</div>
+
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+/* ------------------------------------------------------------------ world */
+const FIELDS = {
+  full: { w: 105, h: 68, label: 'Hel plan' },
+  half: { w: 52.5, h: 68, label: 'Halvplan' },
+  area: { w: 40, h: 30, label: 'Träningsyta' },
+};
+const KINDS = {
+  team: { label: 'Spelare', r: 1.1 },
+  opp: { label: 'Motståndare', r: 1.1 },
+  keeper: { label: 'Målvakt', r: 1.1 },
+  ball: { label: 'Boll', r: 0.55 },
+  cone: { label: 'Kon', r: 0.6 },
+  minigoal: { label: 'Litet mål', w: 3, d: 1.2 },
+  goal: { label: 'Mål', w: 7.32, d: 2 },
+  ladder: { label: 'Stege', w: 1, l: 5 },
+  ring: { label: 'Ring', r: 0.8 },
+  pole: { label: 'Docka', r: 0.6 },
+  zone: { label: 'Zon', w: 12, h: 8 },
+};
+const TRAY = ['team', 'opp', 'keeper', 'ball', 'cone', 'minigoal', 'goal', 'zone', 'ladder', 'ring', 'pole'];
+const PLAYERS = new Set(['team', 'opp', 'keeper']);
+const STEP_SECONDS = 1.5;
+
+/* ------------------------------------------------------------------ state */
+let state = blank();
+let current = 0;            // step being edited (0 = start position)
+let selected = null;        // piece id
+let undoStack = [], redoStack = [];
+let mode = 'edit';          // 'edit' | 'play'
+let playT = 0, playing = false, speed = 1, loop = true, followId = null, lastTs = 0;
+const downloads = null; // the open web saves through the share sheet or a normal download
+
+function blank() { return { name: 'Ny övning', field: 'area', pieces: [], steps: [] }; }
+const uid = () => Math.random().toString(36).slice(2, 9);
+const $ = (id) => document.getElementById(id);
+
+function snapshot() { return JSON.stringify(state); }
+function commit() { undoStack.push(snapshot()); if (undoStack.length > 80) undoStack.shift(); redoStack = []; }
+function undo() { if (!undoStack.length) return; redoStack.push(snapshot()); state = JSON.parse(undoStack.pop()); afterLoad(); }
+function redo() { if (!redoStack.length) return; undoStack.push(snapshot()); state = JSON.parse(redoStack.pop()); afterLoad(); }
+function afterLoad() { current = Math.min(current, state.steps.length); selected = null; renderUI(); draw(); save(); }
+
+/* ------------------------------------------------------------------ positions */
+const piece = (id) => state.pieces.find((p) => p.id === id);
+function posAt(id, k) { // position at the END of step k (k = 0 → start)
+  const p = piece(id); let pos = { x: p.x, y: p.y };
+  for (let i = 1; i <= k && i <= state.steps.length; i++) { const m = state.steps[i - 1].moves[id]; if (m) pos = m.pts[m.pts.length - 1]; }
+  return pos;
+}
+function stepPath(id, k) { // polyline for step k (1-based) including its start, or null
+  const s = state.steps[k - 1]; if (!s) return null; const m = s.moves[id]; if (!m) return null;
+  return smooth([posAt(id, k - 1), ...m.pts]);
+}
+function smooth(pts) { // Catmull-Rom through the points → dense polyline with cumulative lengths
+  if (pts.length < 2) return { pts, len: [0], total: 0 };
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const n = pts.length === 2 ? 1 : 8;
+    for (let t = 0; t < n; t++) {
+      const u = t / n, u2 = u * u, u3 = u2 * u;
+      out.push({
+        x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * u + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * u2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * u3),
+        y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * u + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * u2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * u3),
+      });
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  const len = [0];
+  for (let i = 1; i < out.length; i++) len.push(len[i - 1] + Math.hypot(out[i].x - out[i - 1].x, out[i].y - out[i - 1].y));
+  return { pts: out, len, total: len[len.length - 1] };
+}
+function along(path, f) { // point at fraction f of the path's length, plus heading
+  const d = f * path.total; let i = 1;
+  while (i < path.len.length - 1 && path.len[i] < d) i++;
+  const a = path.pts[i - 1], b = path.pts[i]; const seg = path.len[i] - path.len[i - 1] || 1;
+  const u = Math.max(0, Math.min(1, (d - path.len[i - 1]) / seg));
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function posAtTime(id, T) { // during playback, T in [0, steps]
+  const n = state.steps.length; if (n === 0 || T <= 0) return posAt(id, 0);
+  const k = Math.min(n, Math.floor(T) + 1); const f = Math.min(1, T - (k - 1));
+  const path = stepPath(id, k);
+  if (!path) return posAt(id, k - 1);
+  return along(path, ease(f));
+}
+/** Who carries the ball in step k: a player whose run follows the ball's path. */
+function dribbler(k) {
+  const ball = state.pieces.find((p) => p.kind === 'ball' && state.steps[k - 1]?.moves[p.id]); if (!ball) return null;
+  const bp = stepPath(ball.id, k);
+  for (const p of state.pieces) {
+    if (!PLAYERS.has(p.kind)) continue; const pp = stepPath(p.id, k); if (!pp) continue;
+    let ok = true; for (const f of [0, 0.25, 0.5, 0.75, 1]) { const a = along(bp, f), b = along(pp, f); if (Math.hypot(a.x - b.x, a.y - b.y) > 2.6) { ok = false; break; } }
+    if (ok) return { player: p.id, ball: ball.id };
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ view */
+const canvas = $('pitch'); const ctx = canvas.getContext('2d');
+let view = { vertical: false, s: 10, ox: 0, oy: 0, w: 0, h: 0, dpr: 1 };
+function layout() {
+  const r = $('stage').getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+  const F = FIELDS[state.field]; const pad = 12;
+  const vertical = r.height > r.width * 1.05;
+  const ww = vertical ? F.h : F.w, wh = vertical ? F.w : F.h;
+  const s = Math.min((r.width - pad * 2) / ww, (r.height - pad * 2) / wh);
+  view = { vertical, s, ox: (r.width - ww * s) / 2, oy: (r.height - wh * s) / 2, w: r.width, h: r.height, dpr };
+}
+function toScreen(p) {
+  const F = FIELDS[state.field];
+  return view.vertical ? { x: view.ox + p.y * view.s, y: view.oy + (F.w - p.x) * view.s } : { x: view.ox + p.x * view.s, y: view.oy + p.y * view.s };
+}
+function toWorld(px, py) {
+  const F = FIELDS[state.field];
+  const p = view.vertical ? { x: F.w - (py - view.oy) / view.s, y: (px - view.ox) / view.s } : { x: (px - view.ox) / view.s, y: (py - view.oy) / view.s };
+  return { x: Math.max(0, Math.min(F.w, p.x)), y: Math.max(0, Math.min(F.h, p.y)) };
+}
+function worldTransform(c, v = view, field = state.field) {
+  const F = FIELDS[field]; const d = v.dpr, s = v.s;
+  if (v.vertical) c.setTransform(0, -s * d, s * d, 0, v.ox * d, (v.oy + F.w * s) * d);
+  else c.setTransform(s * d, 0, 0, s * d, v.ox * d, v.oy * d);
+}
+const screenTransform = (c, v = view) => c.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const px = (m, min) => Math.max(min, m * view.s);
+
+/* ------------------------------------------------------------------ drawing */
+function drawField(c, field, v) {
+  const F = FIELDS[field];
+  worldTransform(c, v, field);
+  // grass with mowing stripes
+  const stripes = field === 'area' ? 8 : 12;
+  for (let i = 0; i < stripes; i++) { c.fillStyle = i % 2 ? '#2E7D4F' : '#348A57'; c.fillRect((F.w / stripes) * i, 0, F.w / stripes + 0.05, F.h); }
+  const lw = 1.6 / v.s; c.strokeStyle = 'rgba(255,255,255,.88)'; c.lineWidth = lw; c.lineJoin = 'round';
+  if (field === 'area') {
+    c.setLineDash([1.2, 0.9]); c.strokeRect(1, 1, F.w - 2, F.h - 2); c.setLineDash([]);
+    return;
+  }
+  const full = field === 'full';
+  const L = full ? 105 : 52.5; const ox = full ? 0 : -52.5; // half pitch shows the attacking half (goal at the far end)
+  c.save(); c.beginPath(); c.rect(0, 0, F.w, F.h); c.clip(); c.translate(ox, 0);
+  c.strokeRect(0.5, 0.5, 104, 67);
+  c.beginPath(); c.moveTo(52.5, 0.5); c.lineTo(52.5, 67.5); c.stroke();
+  c.beginPath(); c.arc(52.5, 34, 9.15, 0, Math.PI * 2); c.stroke();
+  dot(c, 52.5, 34, 0.35);
+  for (const side of [0, 1]) {
+    const x0 = side ? 104.5 : 0.5, dir = side ? -1 : 1;
+    c.strokeRect(side ? x0 - 16.5 : x0, 34 - 20.16, 16.5, 40.32);
+    c.strokeRect(side ? x0 - 5.5 : x0, 34 - 9.16, 5.5, 18.32);
+    dot(c, x0 + dir * 11, 34, 0.3);
+    c.beginPath(); c.arc(x0 + dir * 11, 34, 9.15, side ? Math.PI - 0.93 : -0.93, side ? Math.PI + 0.93 : 0.93); c.stroke();
+    c.save(); c.lineWidth = lw * 1.6; c.strokeRect(side ? x0 : x0 - 1.4, 34 - 3.66, 1.4, 7.32); c.restore();
+  }
+  for (const [x, y] of [[0.5, 0.5], [104.5, 0.5], [0.5, 67.5], [104.5, 67.5]]) { c.beginPath(); c.arc(x, y, 1, 0, Math.PI * 2); c.stroke(); }
+  c.restore();
+}
+function dot(c, x, y, r) { c.save(); c.fillStyle = 'rgba(255,255,255,.88)'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.restore(); }
+
+function drawShapePiece(c, p, pos, v, field) { // world-space shapes: goals, zones, ladders
+  worldTransform(c, v, field); const K = KINDS[p.kind]; const rot = ((p.rot || 0) * Math.PI) / 180;
+  c.save(); c.translate(pos.x, pos.y); c.rotate(rot); c.lineJoin = 'round';
+  if (p.kind === 'zone') {
+    const w = p.w || K.w, h = p.h || K.h;
+    c.fillStyle = 'rgba(255, 214, 102, .22)'; c.fillRect(-w / 2, -h / 2, w, h);
+    c.setLineDash([0.8, 0.6]); c.strokeStyle = 'rgba(255, 214, 102, .95)'; c.lineWidth = 2 / v.s; c.strokeRect(-w / 2, -h / 2, w, h); c.setLineDash([]);
+  } else if (p.kind === 'goal' || p.kind === 'minigoal') {
+    const w = K.w, d = K.d; c.strokeStyle = '#FFFFFF'; c.lineWidth = Math.max(2.4 / v.s, 0.18);
+    c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(0, -w / 2, d, w);
+    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1 / v.s;
+    for (let y = -w / 2; y <= w / 2 + 0.01; y += w / 6) { c.beginPath(); c.moveTo(0, y); c.lineTo(d, y); c.stroke(); }
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = Math.max(3 / v.s, 0.2);
+    c.beginPath(); c.moveTo(0, -w / 2); c.lineTo(d, -w / 2); c.lineTo(d, w / 2); c.lineTo(0, w / 2); c.stroke();
+  } else if (p.kind === 'ladder') {
+    const w = K.w, l = K.l; c.strokeStyle = '#FFD24D'; c.lineWidth = Math.max(2.2 / v.s, 0.12);
+    c.strokeRect(-w / 2, -l / 2, w, l);
+    for (let y = -l / 2 + l / 8; y < l / 2; y += l / 8) { c.beginPath(); c.moveTo(-w / 2, y); c.lineTo(w / 2, y); c.stroke(); }
+  }
+  c.restore();
+}
+
+function drawRoundPiece(c, p, sp, v, opts = {}) { // screen-space round pieces
+  screenTransform(c, v); const K = KINDS[p.kind]; const alpha = opts.alpha ?? 1;
+  c.save(); c.globalAlpha = alpha;
+  if (PLAYERS.has(p.kind)) {
+    const r = Math.max(11, K.r * v.s);
+    const fill = p.kind === 'team' ? css('--team') : p.kind === 'opp' ? css('--opp') : css('--keeper');
+    c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 6; c.shadowOffsetY = 2;
+    c.fillStyle = fill; c.beginPath(); c.arc(sp.x, sp.y, r, 0, Math.PI * 2); c.fill();
+    c.shadowColor = 'transparent'; c.lineWidth = 2; c.strokeStyle = '#FFFFFF'; c.stroke();
+    if (opts.highlight) { c.lineWidth = 3; c.strokeStyle = '#FFC879'; c.beginPath(); c.arc(sp.x, sp.y, r + 4, 0, Math.PI * 2); c.stroke(); }
+    if (p.label) {
+      c.fillStyle = p.kind === 'keeper' ? '#3A2A00' : '#FFFFFF';
+      c.font = `800 ${Math.round(r * (p.label.length > 2 ? 0.78 : 0.95))}px ${css('--font')}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(p.label, sp.x, sp.y + 0.5);
+    }
+  } else if (p.kind === 'ball') {
+    const r = Math.max(6.5, K.r * v.s) * (opts.lift || 1);
+    if (opts.lift && opts.lift > 1) { c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(sp.x + 3, sp.y + (opts.lift - 1) * 18, r * 0.9, r * 0.5, 0, 0, Math.PI * 2); c.fill(); }
+    c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 4; c.shadowOffsetY = 1.5;
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(sp.x, sp.y, r, 0, Math.PI * 2); c.fill(); c.shadowColor = 'transparent';
+    c.fillStyle = '#1D2433'; c.beginPath();
+    for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5; const x = sp.x + Math.cos(a) * r * 0.42, y = sp.y + Math.sin(a) * r * 0.42; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.closePath(); c.fill(); c.lineWidth = 1; c.strokeStyle = '#1D2433'; c.beginPath(); c.arc(sp.x, sp.y, r, 0, Math.PI * 2); c.stroke();
+  } else if (p.kind === 'cone') {
+    const r = Math.max(8, K.r * v.s);
+    c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 3; c.shadowOffsetY = 1.5;
+    c.fillStyle = '#F7931E'; c.beginPath(); c.moveTo(sp.x, sp.y - r); c.lineTo(sp.x + r * 0.9, sp.y + r * 0.7); c.lineTo(sp.x - r * 0.9, sp.y + r * 0.7); c.closePath(); c.fill();
+    c.shadowColor = 'transparent'; c.lineWidth = 1.2; c.strokeStyle = '#A65300'; c.stroke();
+  } else if (p.kind === 'ring') {
+    const r = Math.max(8, K.r * v.s); c.lineWidth = 3; c.strokeStyle = '#FFD24D'; c.beginPath(); c.arc(sp.x, sp.y, r, 0, Math.PI * 2); c.stroke();
+  } else if (p.kind === 'pole') {
+    const r = Math.max(7, K.r * v.s);
+    c.fillStyle = '#26303F'; c.beginPath(); c.arc(sp.x, sp.y, r, 0, Math.PI * 2); c.fill();
+    c.lineWidth = 2; c.strokeStyle = '#F2C14E'; c.stroke(); c.fillStyle = '#F2C14E'; c.beginPath(); c.arc(sp.x, sp.y, r * 0.35, 0, Math.PI * 2); c.fill();
+  }
+  if (opts.selected) { c.globalAlpha = 1; c.lineWidth = 2; c.setLineDash([4, 3]); c.strokeStyle = '#FFFFFF'; c.beginPath(); c.arc(sp.x, sp.y, (PLAYERS.has(p.kind) ? Math.max(11, K.r * v.s) : 12) + 6, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); }
+  c.restore();
+}
+
+function drawArrow(c, path, style, color, alpha, v) { // screen space; style: run | pass | dribble
+  if (!path || path.total < 0.3) return;
+  screenTransform(c, v); c.save(); c.globalAlpha = alpha; c.strokeStyle = color; c.fillStyle = color; c.lineCap = 'round'; c.lineJoin = 'round';
+  const head = 9; const endGap = style === 'pass' ? 9 : 14; const totalPx = path.total * v.s;
+  const stop = Math.max(0, 1 - endGap / Math.max(totalPx, 1));
+  c.lineWidth = style === 'pass' ? 2.4 : 2.2;
+  c.beginPath();
+  if (style === 'dribble') {
+    const n = Math.max(8, Math.round(totalPx / 7));
+    for (let i = 0; i <= n; i++) {
+      const f = (i / n) * stop; const a = along(path, f); const s = toScreen(a); const amp = i === 0 || i === n ? 0 : (i % 2 ? 4 : -4);
+      const nx = -Math.sin(screenAngle(a.ang)), ny = Math.cos(screenAngle(a.ang));
+      const x = s.x + nx * amp, y = s.y + ny * amp; i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+  } else {
+    if (style === 'run') c.setLineDash([7, 6]);
+    const steps = 40;
+    for (let i = 0; i <= steps; i++) { const s = toScreen(along(path, (i / steps) * stop)); i ? c.lineTo(s.x, s.y) : c.moveTo(s.x, s.y); }
+  }
+  c.stroke(); c.setLineDash([]);
+  const tip = toScreen(along(path, stop)); const before = toScreen(along(path, Math.max(0, stop - 0.04)));
+  const ang = Math.atan2(tip.y - before.y, tip.x - before.x);
+  c.beginPath(); c.moveTo(tip.x + Math.cos(ang) * 2, tip.y + Math.sin(ang) * 2);
+  c.lineTo(tip.x - Math.cos(ang - 0.45) * head, tip.y - Math.sin(ang - 0.45) * head);
+  c.lineTo(tip.x - Math.cos(ang + 0.45) * head, tip.y - Math.sin(ang + 0.45) * head); c.closePath(); c.fill();
+  c.restore();
+}
+const screenAngle = (worldAng) => (view.vertical ? worldAng - Math.PI / 2 : worldAng);
+
+function arrowStyle(p, k, carry) {
+  if (p.kind === 'ball') return carry && carry.ball === p.id ? null : 'pass';
+  if (carry && carry.player === p.id) return 'dribble';
+  return PLAYERS.has(p.kind) ? 'run' : 'run';
+}
+function arrowColor(p) { return p.kind === 'ball' ? '#FFFFFF' : p.kind === 'opp' ? '#FFB4B4' : p.kind === 'keeper' ? '#FFE39A' : '#CFE3FF'; }
+
+const trails = new Map();
+function draw() {
+  const c = ctx, v = view;
+  screenTransform(c, v); c.clearRect(0, 0, v.w, v.h); c.fillStyle = css('--bg'); c.fillRect(0, 0, v.w, v.h);
+  // pitch background card
+  worldTransform(c); const F = FIELDS[state.field];
+  c.save(); c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 18 / v.s; c.fillStyle = '#2E7D4F'; c.fillRect(-0.6, -0.6, F.w + 1.2, F.h + 1.2); c.restore();
+  drawField(c, state.field, v);
+
+  const playMode = mode === 'play';
+  const k = playMode ? Math.min(state.steps.length, Math.floor(playT) + 1) : current;
+  const carry = k >= 1 ? dribbler(k) : null;
+  const shapes = state.pieces.filter((p) => !KINDS[p.kind].r || p.kind === 'zone');
+  const rounds = state.pieces.filter((p) => KINDS[p.kind].r && p.kind !== 'zone');
+  const posOf = (p) => (playMode ? posAtTime(p.id, playT) : posAt(p.id, current));
+
+  for (const p of shapes) drawShapePiece(c, p, posOf(p), v, state.field);
+
+  // arrows of the step: solid while editing, faint ahead during playback
+  if (k >= 1) {
+    for (const p of state.pieces) {
+      const path = stepPath(p.id, k); if (!path) continue; const st = arrowStyle(p, k, carry); if (!st) continue;
+      const dim = followId && p.id !== followId && p.kind !== 'ball';
+      drawArrow(c, path, st, arrowColor(p), playMode ? (dim ? 0.12 : 0.38) : 0.95, v);
+    }
+  }
+  // where things stood at the start of the step (editing)
+  if (!playMode && k >= 1) for (const p of rounds) if (state.steps[k - 1].moves[p.id]) drawRoundPiece(c, p, toScreen(posAt(p.id, k - 1)), v, { alpha: 0.28 });
+
+  // trails during playback
+  if (playMode && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    screenTransform(c, v);
+    for (const [id, wpts] of trails) {
+      const p = piece(id); if (!p || wpts.length < 2) continue; const dim = followId && id !== followId && p.kind !== 'ball';
+      const pts = wpts.map(toScreen);
+      for (let i = 1; i < pts.length; i++) { c.strokeStyle = p.kind === 'ball' ? 'rgba(255,255,255,1)' : arrowColor(p); c.globalAlpha = (i / pts.length) * (dim ? 0.08 : 0.5); c.lineWidth = p.kind === 'ball' ? 2 : 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(pts[i - 1].x, pts[i - 1].y); c.lineTo(pts[i].x, pts[i].y); c.stroke(); }
+      c.globalAlpha = 1;
+    }
+  }
+
+  // pieces: balls last so they sit on top of feet
+  const ordered = [...rounds].sort((a, b) => (a.kind === 'ball') - (b.kind === 'ball'));
+  for (const p of ordered) {
+    const pos = posOf(p); let lift = 1;
+    if (playMode && p.kind === 'ball' && k >= 1 && state.steps[k - 1].moves[p.id] && !(carry && carry.ball === p.id)) {
+      const f = Math.min(1, playT - (k - 1)); const path = stepPath(p.id, k); if (path && path.total > 8) lift = 1 + Math.sin(Math.PI * ease(f)) * Math.min(0.55, path.total / 60);
+    }
+    const dim = playMode && followId && p.id !== followId && p.kind !== 'ball';
+    drawRoundPiece(c, p, toScreen(pos), v, { alpha: dim ? 0.3 : 1, highlight: playMode && followId === p.id, selected: !playMode && selected === p.id, lift });
+  }
+  if (!playMode && selected) { const p = piece(selected); if (p && (!KINDS[p.kind].r || p.kind === 'zone')) { screenTransform(c, v); const sp = toScreen(posAt(p.id, current)); c.save(); c.setLineDash([4, 3]); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(sp.x, sp.y, 16, 0, Math.PI * 2); c.stroke(); c.restore(); } }
+}
+
+/* ------------------------------------------------------------------ hit testing */
+function hit(px0, py0) {
+  const list = [...state.pieces].reverse();
+  for (const p of list) { // round pieces first (they sit on top)
+    if (!KINDS[p.kind].r || p.kind === 'zone') continue;
+    const sp = toScreen(posAt(p.id, current)); const r = Math.max(16, (KINDS[p.kind].r || 1) * view.s + 6);
+    if (Math.hypot(sp.x - px0, sp.y - py0) <= r) return p;
+  }
+  const w = toWorld(px0, py0);
+  for (const p of list) {
+    if (KINDS[p.kind].r && p.kind !== 'zone') continue; const pos = posAt(p.id, current); const K = KINDS[p.kind];
+    const rot = (-(p.rot || 0) * Math.PI) / 180; const dx = w.x - pos.x, dy = w.y - pos.y;
+    const lx = dx * Math.cos(rot) - dy * Math.sin(rot), ly = dx * Math.sin(rot) + dy * Math.cos(rot);
+    let hw, hh;
+    if (p.kind === 'zone') { hw = (p.w || K.w) / 2; hh = (p.h || K.h) / 2; }
+    else if (p.kind === 'ladder') { hw = K.w / 2 + 0.8; hh = K.l / 2; }
+    else { hw = K.d + 0.6; hh = K.w / 2 + 0.4; }
+    const minPx = 14 / view.s;
+    if (Math.abs(lx) <= Math.max(hw, minPx) && Math.abs(ly) <= Math.max(hh, minPx)) return p;
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ editing on the pitch */
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => {
+  if (mode !== 'edit') return;
+  const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+  const p = hit(x, y);
+  hideBubble();
+  if (!p) { selected = null; draw(); return; }
+  canvas.setPointerCapture(e.pointerId);
+  drag = { id: p.id, sx: x, sy: y, moved: false, startSnap: snapshot(), pts: [] };
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+  if (!drag.moved && Math.hypot(x - drag.sx, y - drag.sy) < 6) return;
+  if (!drag.moved) { drag.moved = true; undoStack.push(drag.startSnap); redoStack = []; selected = drag.id; }
+  const w = toWorld(x, y); const p = piece(drag.id);
+  if (current === 0) { p.x = w.x; p.y = w.y; }
+  else {
+    const step = state.steps[current - 1];
+    const m = step.moves[p.id] || (step.moves[p.id] = { pts: [] });
+    const last = m.pts[m.pts.length - 1] || posAt(p.id, current - 1);
+    if (Math.hypot(w.x - last.x, w.y - last.y) > 0.7) m.pts.push({ x: +w.x.toFixed(2), y: +w.y.toFixed(2) });
+    else if (m.pts.length) m.pts[m.pts.length - 1] = { x: +w.x.toFixed(2), y: +w.y.toFixed(2) };
+  }
+  draw();
+});
+function endDrag() {
+  if (!drag) return; const d = drag; drag = null;
+  if (!d.moved) { selected = d.id; draw(); showBubble(d.id); return; }
+  if (current > 0) { const m = state.steps[current - 1].moves[d.id]; if (m) { m.pts = simplify(m.pts, 0.45); if (!m.pts.length) delete state.steps[current - 1].moves[d.id]; } }
+  renderUI(); draw(); save();
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+function simplify(pts, tol) { // Ramer–Douglas–Peucker keeps the shape of a run with few points
+  if (pts.length < 3) return pts;
+  const keep = new Array(pts.length).fill(false); keep[0] = keep[pts.length - 1] = true;
+  (function rdp(a, b) {
+    let max = 0, idx = -1; const A = pts[a], B = pts[b]; const dx = B.x - A.x, dy = B.y - A.y; const L = Math.hypot(dx, dy) || 1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs(dy * pts[i].x - dx * pts[i].y + B.x * A.y - B.y * A.x) / L; if (d > max) { max = d; idx = i; } }
+    if (max > tol && idx > 0) { keep[idx] = true; rdp(a, idx); rdp(idx, b); }
+  })(0, pts.length - 1);
+  return pts.filter((_, i) => keep[i]);
+}
+
+/* ------------------------------------------------------------------ selection bubble */
+function showBubble(id) {
+  const p = piece(id); if (!p) return; const b = $('bubble'); b.innerHTML = '';
+  const add = (label, fn, cls) => { const el = document.createElement('button'); el.textContent = label; if (cls) el.className = cls; el.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); b.appendChild(el); return el; };
+  if (PLAYERS.has(p.kind)) {
+    const inp = document.createElement('input'); inp.value = p.label || ''; inp.maxLength = 3; inp.setAttribute('aria-label', 'Nummer'); inp.inputMode = 'text';
+    inp.addEventListener('focus', () => commit());
+    inp.addEventListener('input', () => { p.label = inp.value.trim(); draw(); save(); });
+    b.appendChild(inp);
+    add('Byt lag', () => { commit(); p.kind = p.kind === 'team' ? 'opp' : p.kind === 'opp' ? 'keeper' : 'team'; draw(); save(); });
+  }
+  if (p.kind === 'goal' || p.kind === 'minigoal' || p.kind === 'ladder' || p.kind === 'zone') add('Vrid', () => { commit(); p.rot = ((p.rot || 0) + 45) % 360; draw(); save(); });
+  if (p.kind === 'zone') add('Storlek', () => { commit(); const sizes = [[12, 8], [20, 14], [30, 20], [6, 6]]; const i = sizes.findIndex(([w, h]) => w === (p.w || 12) && h === (p.h || 8)); [p.w, p.h] = sizes[(i + 1) % sizes.length]; draw(); save(); });
+  if (current > 0 && state.steps[current - 1].moves[id]) add('Ta bort rörelsen', () => { commit(); delete state.steps[current - 1].moves[id]; hideBubble(); renderUI(); draw(); save(); });
+  add('Kopiera', () => { commit(); const pos = posAt(id, current); const n = { ...JSON.parse(JSON.stringify(p)), id: uid(), x: Math.min(FIELDS[state.field].w, pos.x + 3), y: pos.y }; if (PLAYERS.has(n.kind)) n.label = nextNumber(n.kind); state.pieces.push(n); selected = n.id; hideBubble(); draw(); save(); });
+  add('Ta bort', () => { commit(); state.pieces = state.pieces.filter((q) => q.id !== id); state.steps.forEach((s) => delete s.moves[id]); selected = null; hideBubble(); renderUI(); draw(); save(); }, 'del');
+  b.hidden = false;
+  const sp = toScreen(posAt(id, current)); const bw = b.offsetWidth, bh = b.offsetHeight;
+  b.style.left = Math.max(4, Math.min(view.w - bw - 4, sp.x - bw / 2)) + 'px';
+  b.style.top = (sp.y - bh - 26 > 4 ? sp.y - bh - 26 : sp.y + 26) + 'px';
+}
+function hideBubble() { $('bubble').hidden = true; }
+function nextNumber(kind) {
+  const used = new Set(state.pieces.filter((p) => p.kind === kind).map((p) => +p.label).filter(Boolean));
+  if (kind === 'keeper' && !used.has(1)) return '1';
+  let n = kind === 'keeper' ? 1 : 2; if (kind !== 'keeper' && !used.has(1) && !state.pieces.some((p) => p.kind === kind)) n = 1;
+  while (used.has(n)) n++; return String(n);
+}
+
+/* ------------------------------------------------------------------ tray: drag pieces onto the pitch */
+function trayIcon(kind) {
+  const c = document.createElement('canvas'); const d = 2; c.width = 24 * d; c.height = 24 * d; const g = c.getContext('2d');
+  const v = { dpr: d, s: 5, ox: 0, oy: 0, w: 24, h: 24, vertical: false };
+  const p = { kind, label: PLAYERS.has(kind) ? (kind === 'keeper' ? '1' : '') : '' };
+  if (KINDS[kind].r && kind !== 'zone') drawRoundPiece(g, p, { x: 12, y: 12 }, { ...v, s: kind === 'ball' ? 9 : 5.2 });
+  else {
+    g.setTransform(d, 0, 0, d, 0, 0);
+    if (kind === 'zone') { g.fillStyle = 'rgba(214,160,20,.25)'; g.fillRect(2, 5, 20, 14); g.setLineDash([3, 2]); g.strokeStyle = '#C99A1A'; g.lineWidth = 1.5; g.strokeRect(2, 5, 20, 14); }
+    else if (kind === 'ladder') { g.strokeStyle = '#D9A400'; g.lineWidth = 1.6; g.strokeRect(8, 1, 8, 22); for (let y = 4; y < 23; y += 3.5) { g.beginPath(); g.moveTo(8, y); g.lineTo(16, y); g.stroke(); } }
+    else { const big = kind === 'goal'; g.strokeStyle = css('--text'); g.lineWidth = 2; g.beginPath(); g.moveTo(6, big ? 2 : 6); g.lineTo(17, big ? 2 : 6); g.lineTo(17, big ? 22 : 18); g.lineTo(6, big ? 22 : 18); g.stroke(); }
+  }
+  return c;
+}
+let trayDrag = null;
+function buildTray() {
+  const tray = $('tray'); tray.innerHTML = '';
+  for (const kind of TRAY) {
+    const b = document.createElement('button'); b.className = 'item'; b.setAttribute('aria-label', `Lägg till ${KINDS[kind].label.toLowerCase()}`);
+    b.append(trayIcon(kind), document.createTextNode(KINDS[kind].label));
+    b.addEventListener('pointerdown', (e) => { trayDrag = { kind, sx: e.clientX, sy: e.clientY, started: false, el: null, pointerId: e.pointerId }; });
+    b.addEventListener('click', () => { if (trayDrag && trayDrag.started) return; addPiece(kind, null); });
+    tray.appendChild(b);
+  }
+}
+window.addEventListener('pointermove', (e) => {
+  if (!trayDrag) return;
+  const dx = e.clientX - trayDrag.sx, dy = e.clientY - trayDrag.sy;
+  if (!trayDrag.started) {
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+      trayDrag.started = true; const el = document.createElement('div'); el.className = 'ghost-drag';
+      const ic = trayIcon(trayDrag.kind); ic.style.width = '40px'; ic.style.height = '40px'; el.appendChild(ic); document.body.appendChild(el); trayDrag.el = el;
+    } else if (Math.abs(dx) > 12) { trayDrag = null; return; }
+  }
+  if (trayDrag && trayDrag.started) { trayDrag.el.style.left = e.clientX + 'px'; trayDrag.el.style.top = e.clientY + 'px'; e.preventDefault(); }
+}, { passive: false });
+window.addEventListener('pointerup', (e) => {
+  if (!trayDrag) return; const t = trayDrag;
+  if (t.started) {
+    t.el.remove(); const r = canvas.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) addPiece(t.kind, toWorld(e.clientX - r.left, e.clientY - r.top));
+    setTimeout(() => { trayDrag = null; }, 0);
+  } else trayDrag = null;
+});
+function addPiece(kind, at) {
+  if (mode !== 'edit') return;
+  commit(); const F = FIELDS[state.field];
+  let pos = at;
+  if (!pos) { // tap: place near the middle, nudged so pieces don't stack
+    const n = state.pieces.length; pos = { x: F.w / 2 + ((n % 5) - 2) * 3, y: F.h / 2 + (Math.floor(n / 5) % 3 - 1) * 3 };
+  }
+  const p = { id: uid(), kind, x: +pos.x.toFixed(2), y: +pos.y.toFixed(2) };
+  if (PLAYERS.has(kind)) p.label = nextNumber(kind);
+  if (kind === 'goal' || kind === 'minigoal') p.rot = pos.x < F.w / 2 ? 180 : 0;
+  state.pieces.push(p); selected = p.id; hideTip(); renderUI(); draw(); save();
+}
+
+/* ------------------------------------------------------------------ steps & UI */
+function renderUI() {
+  const steps = $('steps'); steps.innerHTML = '';
+  const mk = (label, k, aria) => { const b = document.createElement('button'); b.className = 'step'; b.textContent = label; b.setAttribute('aria-pressed', String(k === current)); b.setAttribute('aria-label', aria); b.addEventListener('click', () => { current = k; selected = null; hideBubble(); renderUI(); draw(); }); steps.appendChild(b); };
+  mk('Start', 0, 'Startuppställning');
+  state.steps.forEach((_, i) => mk(String(i + 1), i + 1, `Steg ${i + 1}`));
+  const add = document.createElement('button'); add.className = 'step add'; add.textContent = '+ Steg'; add.setAttribute('aria-label', 'Nytt steg');
+  add.addEventListener('click', () => { commit(); state.steps.splice(current, 0, { note: '', moves: {} }); current = current + 1; selected = null; hideBubble(); renderUI(); draw(); save(); toast(`Steg ${current}: flytta spelare och boll dit de ska`); });
+  steps.appendChild(add);
+  if (current > 0) {
+    const del = document.createElement('button'); del.className = 'step'; del.style.color = 'var(--danger)'; del.textContent = 'Ta bort steg';
+    del.addEventListener('click', () => { commit(); state.steps.splice(current - 1, 1); current = Math.max(0, current - 1); renderUI(); draw(); save(); });
+    steps.appendChild(del);
+  }
+  requestAnimationFrame(() => steps.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+  $('btnUndo').disabled = !undoStack.length; $('btnRedo').disabled = !redoStack.length;
+  $('btnPlay').disabled = !state.steps.length;
+  const note = $('note');
+  note.value = current === 0 ? state.note || '' : state.steps[current - 1].note || '';
+  note.placeholder = current === 0 ? 'Beskriv uppställningen (frivilligt)' : `Vad händer i steg ${current}? (visas när övningen spelas)`;
+  $('name').value = state.name;
+}
+$('note').addEventListener('input', (e) => { if (current === 0) state.note = e.target.value; else state.steps[current - 1].note = e.target.value; save(); });
+$('name').addEventListener('input', (e) => { state.name = e.target.value || 'Ny övning'; save(); });
+$('btnUndo').addEventListener('click', undo); $('btnRedo').addEventListener('click', redo);
+
+/* ------------------------------------------------------------------ playback */
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+function enterPlay() {
+  if (!state.steps.length) { toast('Lägg till ett steg först (+ Steg)'); return; }
+  mode = 'play'; selected = null; hideBubble(); hideTip(); $('editBar').hidden = true; $('playBar').hidden = false;
+  buildFollow(); playT = 0; trails.clear(); playing = true; lastTs = 0; updatePlayUI(); requestAnimationFrame(tick);
+}
+function exitPlay() { mode = 'edit'; playing = false; $('editBar').hidden = false; $('playBar').hidden = true; $('caption').hidden = true; followId = null; trails.clear(); renderUI(); draw(); }
+$('btnPlay').addEventListener('click', enterPlay); $('btnEdit').addEventListener('click', exitPlay);
+$('btnPause').addEventListener('click', () => { if (!playing && playT >= state.steps.length) { playT = 0; trails.clear(); } playing = !playing; lastTs = 0; updatePlayUI(); if (playing) requestAnimationFrame(tick); });
+$('btnSpeed').addEventListener('click', () => { speed = speed === 1 ? 0.5 : speed === 0.5 ? 2 : 1; $('btnSpeed').textContent = speed === 0.5 ? '½×' : speed + '×'; });
+$('btnLoop').addEventListener('click', () => { loop = !loop; $('btnLoop').setAttribute('aria-pressed', String(loop)); });
+$('scrub').addEventListener('input', (e) => { playT = +e.target.value * state.steps.length; trails.clear(); playing = false; updatePlayUI(); draw(); });
+function buildFollow() {
+  const f = $('follow'); f.innerHTML = '';
+  const mk = (label, id) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = label; b.setAttribute('aria-pressed', String(followId === id)); b.addEventListener('click', () => { followId = id; buildFollow(); draw(); }); f.appendChild(b); };
+  mk('Alla', null);
+  state.pieces.filter((p) => PLAYERS.has(p.kind) && state.steps.some((s) => s.moves[p.id])).sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (+a.label || 99) - (+b.label || 99)))
+    .forEach((p) => mk(`${p.kind === 'opp' ? 'Mot ' : p.kind === 'keeper' ? 'MV ' : ''}${p.label || '?'}`, p.id));
+}
+function updatePlayUI() {
+  $('btnPause').innerHTML = playing ? ICON_PAUSE : ICON_PLAY; $('btnPause').setAttribute('aria-label', playing ? 'Pausa' : 'Spela');
+  $('scrub').value = String(state.steps.length ? playT / state.steps.length : 0);
+  const n = state.steps.length; const k = Math.min(n, Math.floor(playT) + 1); const note = (playT <= 0 ? state.note : state.steps[k - 1]?.note) || '';
+  const cap = $('caption'); cap.hidden = false;
+  cap.innerHTML = ''; const kk = document.createElement('span'); kk.className = 'k'; kk.textContent = playT <= 0 ? 'Start' : `Steg ${k}/${n}`; cap.append(kk, document.createTextNode(note));
+}
+function recordTrails(t) {
+  for (const p of state.pieces) {
+    if (!KINDS[p.kind].r || p.kind === 'zone') continue; const w = posAtTime(p.id, t);
+    const tr = trails.get(p.id) || []; const last = tr[tr.length - 1];
+    if (!last) { trails.set(p.id, [{ x: w.x, y: w.y }]); continue; }
+    if (Math.hypot(last.x - w.x, last.y - w.y) > 0.25) { tr.push({ x: w.x, y: w.y }); if (tr.length > 26) tr.shift(); }
+    else if (tr.length > 1) tr.shift(); // standing still: the tail fades away
+  }
+}
+function tick(ts) {
+  if (mode !== 'play' || !playing) return;
+  if (!lastTs) lastTs = ts; const dt = Math.min(0.1, (ts - lastTs) / 1000); lastTs = ts;
+  playT += (dt * speed) / STEP_SECONDS;
+  const n = state.steps.length;
+  if (playT >= n + 0.35) { if (loop) { playT = 0; trails.clear(); } else { playT = n; playing = false; } }
+  const t = Math.min(n, playT);
+  recordTrails(t);
+  const saved = playT; playT = t; draw(); playT = saved;
+  updatePlayUI();
+  if (playing) requestAnimationFrame(tick);
+}
+
+/* ------------------------------------------------------------------ templates */
+const P = (kind, x, y, label, extra = {}) => ({ id: uid(), kind, x, y, ...(label ? { label: String(label) } : {}), ...extra });
+function move(st, piece, ...pts) { st.moves[piece.id] = { pts: pts.map(([x, y]) => ({ x, y })) }; }
+const TEMPLATES = [
+  {
+    name: 'Rondo 5 mot 2', desc: 'Fem håller bollen, två jagar.', make() {
+      const c = [P('cone', 14, 9), P('cone', 26, 9), P('cone', 26, 21), P('cone', 14, 21)];
+      const b1 = P('team', 20, 8.6, 1), b2 = P('team', 26.4, 14, 2), b3 = P('team', 23, 21.4, 3), b4 = P('team', 17, 21.4, 4), b5 = P('team', 13.6, 14, 5);
+      const r1 = P('opp', 19, 14, 6), r2 = P('opp', 22, 16.5, 7), ball = P('ball', 20.6, 9.6);
+      const s1 = { note: 'Pass till 2 – de två i mitten flyttar efter bollen', moves: {} }; move(s1, ball, [25.6, 14]); move(s1, r1, [21, 13], [23.4, 13.3]); move(s1, r2, [22, 15.5]);
+      const s2 = { note: 'Spelvändning till 4 genom mitten', moves: {} }; move(s2, ball, [21, 17.5], [17.6, 20.7]); move(s2, r1, [21.5, 16], [19.6, 18.2]); move(s2, r2, [20.5, 14.5]);
+      const s3 = { note: '4 spelar vidare till 5 – jagarna stänger ytan', moves: {} }; move(s3, ball, [14.4, 14.6]); move(s3, r1, [16.8, 16.4]); move(s3, r2, [17.6, 12.6]);
+      return { name: 'Rondo 5 mot 2', field: 'area', note: 'Ruta 12×12 m. Två touch.', pieces: [...c, b1, b2, b3, b4, b5, r1, r2, ball], steps: [s1, s2, s3] };
+    },
+  },
+  {
+    name: '3 mot 2 med avslut', desc: 'Överlägg mot mål på halvplan.', make() {
+      const a = P('team', 22, 34, 9), w1 = P('team', 24, 18, 7), w2 = P('team', 24, 50, 11), d1 = P('opp', 37, 29, 4), d2 = P('opp', 37, 40, 5), gk = P('keeper', 51, 34, 1), ball = P('ball', 23, 34.4);
+      const s1 = { note: '9 driver bollen och lockar en försvarare', moves: {} }; move(s1, a, [27, 34], [31.5, 33]); move(s1, ball, [28, 34.4], [32.5, 33.4]); move(s1, d1, [36, 31.5]); move(s1, w1, [30, 20], [35, 22]); move(s1, w2, [30, 49], [35, 47]);
+      const s2 = { note: 'Pass ut till 11 – 7 löper mot bortre stolpen', moves: {} }; move(s2, ball, [42.5, 47.5]); move(s2, w2, [39, 47.5], [42, 47.5]); move(s2, d2, [40, 44], [42, 45]); move(s2, w1, [40, 25], [45, 30]); move(s2, a, [37, 36], [42, 38]);
+      const s3 = { note: 'Inlägg längs marken till 7', moves: {} }; move(s3, ball, [46, 31]); move(s3, d1, [41, 33]); move(s3, gk, [50.5, 36]);
+      const s4 = { note: 'Avslut direkt', moves: {} }; move(s4, ball, [52.4, 32.6]); move(s4, gk, [51, 33.6]);
+      return { name: '3 mot 2 med avslut', field: 'half', note: 'Anfallarna startar vid mittlinjen.', pieces: [P('goal', 52.5, 34, null, { rot: 0 }), a, w1, w2, d1, d2, gk, ball], steps: [s1, s2, s3, s4] };
+    },
+  },
+  {
+    name: 'Passningskvadrat', desc: 'Passa och följ efter bollen.', make() {
+      const c = [P('cone', 12, 7), P('cone', 28, 7), P('cone', 28, 23), P('cone', 12, 23)];
+      const a = P('team', 11, 7.5, 1), b = P('team', 28.8, 7.5, 2), cc = P('team', 28.8, 23.6, 3), d = P('team', 11.2, 23.6, 4), ball = P('ball', 12.2, 8.2);
+      const s1 = { note: '1 passar till 2 och följer efter passningen', moves: {} }; move(s1, ball, [27.8, 8.2]); move(s1, a, [20, 8.5], [27, 8.8]);
+      const s2 = { note: '2 tar med insidan och passar 3 – följer efter', moves: {} }; move(s2, ball, [28, 22.6]); move(s2, b, [29, 15], [28.6, 22]);
+      const s3 = { note: '3 passar 4', moves: {} }; move(s3, ball, [12.6, 22.8]); move(s3, cc, [20, 23.8], [13.2, 23.4]);
+      const s4 = { note: '4 passar tillbaka till start', moves: {} }; move(s4, ball, [12.4, 8.6]); move(s4, d, [11, 15], [11.6, 8.8]);
+      return { name: 'Passningskvadrat', field: 'area', note: 'Kvadrat 16×16 m, två bollar för mer tempo.', pieces: [...c, a, b, cc, d, ball], steps: [s1, s2, s3, s4] };
+    },
+  },
+  {
+    name: '1 mot 1 mot små mål', desc: 'Dribbla förbi och avsluta.', make() {
+      const g1 = P('minigoal', 3, 15, null, { rot: 180 }), g2 = P('minigoal', 37, 15, null, { rot: 0 });
+      const a = P('team', 12, 15, 10), d = P('opp', 24, 15, 4), ball = P('ball', 13, 15.2);
+      const s1 = { note: '10 driver mot försvararen', moves: {} }; move(s1, a, [19, 14]); move(s1, ball, [20, 14.2]); move(s1, d, [22.5, 14.5]);
+      const s2 = { note: 'Fint – och förbi på högersidan', moves: {} }; move(s2, a, [21, 11], [26, 10]); move(s2, ball, [22, 11.2], [27, 10.4]); move(s2, d, [23.5, 12.5]);
+      const s3 = { note: 'Avslut i det lilla målet', moves: {} }; move(s3, ball, [36.6, 14.6]); move(s3, a, [29, 12]); move(s3, d, [26, 11.5]);
+      return { name: '1 mot 1 mot små mål', field: 'area', pieces: [g1, g2, a, d, ball], steps: [s1, s2, s3] };
+    },
+  },
+  {
+    name: '4-3-3 mot 4-4-2', desc: 'Uppställning på hel plan.', make() {
+      const blue = [[4, 34, 1], [17, 10, 2], [15, 26, 4], [15, 42, 5], [17, 58, 3], [30, 22, 8], [27, 34, 6], [30, 46, 10], [43, 12, 7], [45, 34, 9], [43, 56, 11]].map(([x, y, n]) => P(n === 1 ? 'keeper' : 'team', x, y, n));
+      const red = [[101, 34, 1], [88, 10, 2], [90, 26, 4], [90, 42, 5], [88, 58, 3], [74, 12, 7], [76, 27, 6], [76, 41, 8], [74, 56, 11], [61, 27, 9], [61, 41, 10]].map(([x, y, n]) => P(n === 1 ? 'keeper' : 'opp', x, y, n));
+      return { name: '4-3-3 mot 4-4-2', field: 'full', note: 'Tryck på en spelare för att byta nummer.', pieces: [...blue, ...red, P('ball', 52.5, 34)], steps: [] };
+    },
+  },
+  { name: 'Tom träningsyta', desc: 'Börja från noll, 40×30 m.', make: () => ({ name: 'Ny övning', field: 'area', pieces: [], steps: [] }) },
+  { name: 'Tom halvplan', desc: 'Med mål.', make: () => ({ name: 'Ny övning', field: 'half', pieces: [P('goal', 52.5, 34, null, { rot: 0 })], steps: [] }) },
+  { name: 'Tom hel plan', desc: 'Två mål, 105×68 m.', make: () => ({ name: 'Ny övning', field: 'full', pieces: [], steps: [] }) },
+];
+
+/* ------------------------------------------------------------------ thumbnails */
+function thumb(data, w = 210) {
+  const F = FIELDS[data.field]; const c = document.createElement('canvas'); const d = 2; const h = Math.round((w * 68) / 105);
+  c.width = w * d; c.height = h * d; const g = c.getContext('2d');
+  const s = Math.min(w / F.w, h / F.h); const v = { dpr: d, s, ox: (w - F.w * s) / 2, oy: (h - F.h * s) / 2, w, h, vertical: false };
+  g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = '#2E7D4F'; g.fillRect(0, 0, w, h);
+  const saveState = state, saveView = view; state = data; view = v;
+  drawField(g, data.field, v);
+  for (const p of data.pieces) {
+    if (!KINDS[p.kind].r || p.kind === 'zone') drawShapePiece(g, p, p, v, data.field);
+  }
+  for (const p of data.pieces) if (KINDS[p.kind].r && p.kind !== 'zone') { g.save(); const sp = toScreen(p); screenTransform(g, v); const r = PLAYERS.has(p.kind) ? 4.5 : p.kind === 'ball' ? 3 : 3.2; g.fillStyle = p.kind === 'team' ? css('--team') : p.kind === 'opp' ? css('--opp') : p.kind === 'keeper' ? css('--keeper') : p.kind === 'cone' ? '#F7931E' : p.kind === 'ball' ? '#fff' : '#26303F'; g.beginPath(); g.arc(sp.x, sp.y, r, 0, Math.PI * 2); g.fill(); if (PLAYERS.has(p.kind)) { g.lineWidth = 1; g.strokeStyle = '#fff'; g.stroke(); } g.restore(); }
+  state = saveState; view = saveView;
+  return c;
+}
+
+/* ------------------------------------------------------------------ sheets */
+function openSheet(build) { const sh = $('sheet'); sh.innerHTML = ''; build(sh); $('sheetBack').hidden = false; }
+function closeSheet() { $('sheetBack').hidden = true; }
+$('sheetBack').addEventListener('click', (e) => { if (e.target.id === 'sheetBack') closeSheet(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSheet(); hideBubble(); } if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); } });
+
+$('btnTemplates').addEventListener('click', () => openSheet((sh) => {
+  sh.insertAdjacentHTML('beforeend', '<h2>Färdiga upplägg</h2><p class="sub">Välj ett upplägg att utgå från. Det du har nu går att få tillbaka med Ångra.</p>');
+  const grid = document.createElement('div'); grid.className = 'cards';
+  for (const t of TEMPLATES) {
+    const data = t.make(); const b = document.createElement('button'); b.className = 'card';
+    const tb = document.createElement('b'); tb.textContent = t.name; const ts = document.createElement('span'); ts.textContent = `${t.desc}${data.steps.length ? ` · ${data.steps.length} steg` : ''}`;
+    b.append(thumb(data), tb, ts);
+    b.addEventListener('click', () => { commit(); state = t.make(); current = 0; selected = null; closeSheet(); layout(); renderUI(); draw(); save(); if (state.steps.length) toast('Tryck Spela för att se övningen'); });
+    grid.appendChild(b);
+  }
+  sh.appendChild(grid);
+}));
+
+/* ------------------------------------------------------------------ storage (this device only) */
+const KEY = 'taktiktavlan.current', LIB = 'taktiktavlan.library';
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage off */ } } };
+let saveTimer = 0;
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => store.set(KEY, state), 250); $('btnUndo').disabled = !undoStack.length; $('btnRedo').disabled = !redoStack.length; }
+
+$('btnSaved').addEventListener('click', () => openSheet((sh) => {
+  sh.insertAdjacentHTML('beforeend', '<h2>Mina övningar</h2><p class="sub">Sparas i den här webbläsaren.</p>');
+  const keep = document.createElement('button'); keep.className = 'ghost primary'; keep.style.marginBottom = '12px';
+  keep.textContent = `Spara "${state.name}"`;
+  keep.addEventListener('click', () => {
+    const lib = store.get(LIB) || []; state.savedId = state.savedId || uid();
+    const entry = { id: state.savedId, at: Date.now(), data: JSON.parse(snapshot()) };
+    const i = lib.findIndex((x) => x.id === entry.id); if (i >= 0) lib[i] = entry; else lib.unshift(entry);
+    store.set(LIB, lib); save(); closeSheet(); toast('Sparad');
+  });
+  sh.appendChild(keep);
+  const list = document.createElement('div'); list.className = 'list'; const lib = store.get(LIB) || [];
+  if (!lib.length) list.innerHTML = '<div class="empty">Inga sparade övningar än. Tryck Spara ovan.</div>';
+  for (const e of lib) {
+    const li = document.createElement('div'); li.className = 'li';
+    const t = document.createElement('div'); t.className = 't'; const b = document.createElement('b'); b.textContent = e.data.name; const sp = document.createElement('span');
+    sp.textContent = `${FIELDS[e.data.field].label} · ${e.data.steps.length} steg · ${new Date(e.at).toLocaleDateString('sv-SE')}`; t.append(b, sp);
+    const open = document.createElement('button'); open.className = 'ghost'; open.textContent = 'Öppna';
+    open.addEventListener('click', () => { commit(); state = JSON.parse(JSON.stringify(e.data)); current = 0; closeSheet(); layout(); renderUI(); draw(); save(); });
+    const del = document.createElement('button'); del.className = 'ghost'; del.textContent = 'Ta bort'; del.style.color = 'var(--danger)';
+    del.addEventListener('click', () => {
+      if (del.dataset.sure) { store.set(LIB, (store.get(LIB) || []).filter((x) => x.id !== e.id)); li.remove(); toast('Borttagen'); }
+      else { del.dataset.sure = '1'; del.textContent = 'Säker?'; setTimeout(() => { del.dataset.sure = ''; del.textContent = 'Ta bort'; }, 2500); }
+    });
+    li.append(t, open, del); list.appendChild(li);
+  }
+  sh.appendChild(list);
+}));
+
+/* ------------------------------------------------------------------ export: picture and video */
+const slug = (s) => (s || 'ovning').toLowerCase().replace(/[åä]/g, 'a').replace(/ö/g, 'o').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ovning';
+$('btnExport').addEventListener('click', () => openSheet((sh) => {
+  sh.insertAdjacentHTML('beforeend', '<h2>Spara övningen</h2><p class="sub">Skicka den sedan till laget, t.ex. i WhatsApp.</p>');
+  const list = document.createElement('div'); list.className = 'list';
+  const row = (title, sub, fn) => { const li = document.createElement('button'); li.className = 'li'; li.style.textAlign = 'left'; const t = document.createElement('div'); t.className = 't'; const b = document.createElement('b'); b.textContent = title; const s = document.createElement('span'); s.textContent = sub; t.append(b, s); li.append(t); li.addEventListener('click', () => { closeSheet(); fn(); }); list.appendChild(li); };
+  row('Video', 'Hela övningen som ett klipp', exportVideo);
+  row('Bild', 'Det som syns på planen just nu', exportImage);
+  sh.appendChild(list);
+}));
+async function offer(filename, blob) {
+  if (downloads) {
+    try { await downloads.save({ filename, data: blob }); toast('Sparad'); }
+    catch (e) { if (e && e.code === 'declined') return; toast(e && e.code === 'too_large' ? 'Filen blev för stor' : 'Det gick inte att spara här'); }
+    return;
+  }
+  const file = new File([blob], filename, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { // phones: straight to WhatsApp, Messages…
+    try { await navigator.share({ files: [file], title: state.name }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('Sparad');
+}
+function exportImage() { canvas.toBlob((b) => b && offer(`${slug(state.name)}.png`, b), 'image/png'); }
+async function exportVideo() {
+  const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  const type = window.MediaRecorder && types.find((t) => MediaRecorder.isTypeSupported(t));
+  if (!type || !canvas.captureStream) { toast('Video stöds inte i den här webbläsaren – spara en bild'); return; }
+  const wasPlaying = playing; playing = false;
+  const stream = canvas.captureStream(30); const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 5e6 });
+  const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data); const stopped = new Promise((r) => (rec.onstop = r));
+  toast('Spelar in…', 60000); rec.start(200); trails.clear();
+  const n = state.steps.length; const total = n * STEP_SECONDS + 1.4; const t0 = performance.now();
+  await new Promise((resolve) => {
+    (function frame() {
+      const el = (performance.now() - t0) / 1000; const T = Math.max(0, Math.min(n, (el - 0.6) / STEP_SECONDS));
+      playT = T; recordTrails(T);
+      draw(); updatePlayUI();
+      if (el < total) requestAnimationFrame(frame); else resolve();
+    })();
+  });
+  rec.stop(); await stopped; hideToast();
+  const blob = new Blob(chunks, { type }); playing = wasPlaying;
+  await offer(`${slug(state.name)}.${type.includes('mp4') ? 'mp4' : 'webm'}`, blob);
+}
+
+/* ------------------------------------------------------------------ toast & tip */
+let toastTimer = 0;
+function toast(msg, ms = 2200) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, ms); }
+function hideToast() { $('toast').hidden = true; }
+function hideTip() { $('tip').hidden = true; store.set('taktiktavlan.tipSeen', true); }
+$('tipClose').addEventListener('click', hideTip);
+
+/* ------------------------------------------------------------------ start */
+(function start() {
+  const saved = store.get(KEY);
+  state = saved && saved.pieces ? saved : TEMPLATES[0].make();
+  buildTray(); layout(); renderUI(); draw();
+  if (!store.get('taktiktavlan.tipSeen')) $('tip').hidden = false;
+  new ResizeObserver(() => { layout(); draw(); if (!$('bubble').hidden && selected) showBubble(selected); }).observe($('stage'));
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildTray(); draw(); });
+  $('btnExport').hidden = false;
+})();
+</script>
+
+</body>
+</html>
