@@ -151,7 +151,7 @@ canvas#pitch { position: absolute; inset: 0; width: 100%; height: 100%; touch-ac
     <div class="row">
       <button class="icon-btn" id="btnPause" aria-label="Pausa"></button>
       <input class="range" id="scrub" type="range" min="0" max="1" step="0.001" value="0" aria-label="Tid">
-      <button class="chip" id="btnSpeed" aria-label="Hastighet">1×</button>
+      <button class="chip" id="btnSpeed" aria-label="Hastighet">½×</button>
       <button class="chip" id="btnLoop" aria-pressed="true" aria-label="Upprepa">Upprepa</button>
       <button class="ghost" id="btnEdit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Rita</button>
     </div>
@@ -209,7 +209,7 @@ let current = 0;            // step being edited (0 = start position)
 let selected = null;        // piece id
 let undoStack = [], redoStack = [];
 let mode = 'edit';          // 'edit' | 'play'
-let playT = 0, playing = false, speed = 1, loop = true, followId = null, lastTs = 0;
+let playT = 0, playing = false, speed = 0.5, loop = true, followId = null, lastTs = 0;
 const downloads = null; // the open web saves through the share sheet or a normal download
 
 function blank() { return { name: 'Ny övning', field: 'area', pieces: [], steps: [] }; }
@@ -684,7 +684,7 @@ function enterPlay() {
 function exitPlay() { mode = 'edit'; playing = false; $('editBar').hidden = false; $('playBar').hidden = true; $('caption').hidden = true; followId = null; trails.clear(); renderUI(); draw(); }
 $('btnPlay').addEventListener('click', enterPlay); $('btnEdit').addEventListener('click', exitPlay);
 $('btnPause').addEventListener('click', () => { if (!playing && playT >= state.steps.length) { playT = 0; trails.clear(); } playing = !playing; lastTs = 0; updatePlayUI(); if (playing) requestAnimationFrame(tick); });
-$('btnSpeed').addEventListener('click', () => { speed = speed === 1 ? 0.5 : speed === 0.5 ? 2 : 1; $('btnSpeed').textContent = speed === 0.5 ? '½×' : speed + '×'; });
+$('btnSpeed').addEventListener('click', () => { const S = [0.5, 1, 1.5, 2]; speed = S[(S.indexOf(speed) + 1) % S.length]; $('btnSpeed').textContent = ({ 0.5: '½×', 1.5: '1½×' })[speed] || speed + '×'; });
 $('btnLoop').addEventListener('click', () => { loop = !loop; $('btnLoop').setAttribute('aria-pressed', String(loop)); });
 $('scrub').addEventListener('input', (e) => { playT = +e.target.value * state.steps.length; trails.clear(); playing = false; updatePlayUI(); draw(); });
 function buildFollow() {
