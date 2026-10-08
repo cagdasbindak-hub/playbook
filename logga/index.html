@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#154C79">
+<meta name="description" content="Förslag på ny logga för Playbook – så ser den ut som appikon, på startsidan och i appen.">
+<meta property="og:title" content="Ny logga – förslag">
+<meta property="og:image" content="B.png">
+<link rel="apple-touch-icon" href="nu.png">
+<title>Ny logga</title>
+<style>
+:root {
+  --bg: #F3F6F9; --surface: #FFFFFF; --text: #172033; --muted: #667085; --line: #D8DEE7;
+  --primary: #154C79; --primary-soft: #EDF5FB;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0C121C; --surface: #141C29; --text: #E9EEF5; --muted: #A0ABBD; --line: #263247; --primary: #5B9BD5; --primary-soft: #16273D; }
+}
+:root[data-theme="dark"] { --bg: #0C121C; --surface: #141C29; --text: #E9EEF5; --muted: #A0ABBD; --line: #263247; --primary: #5B9BD5; --primary-soft: #16273D; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+main { max-width: 760px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+h1 { font-size: 24px; margin: 4px 0 6px; }
+p.lead { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.grid { display: grid; gap: 14px; }
+@media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.card.pick { border: 2px solid var(--primary); }
+.card h2 { font-size: 17px; margin: 2px 2px 0; display: flex; align-items: center; gap: 8px; }
+.card h2 .tag { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 14px; }
+.card h2 .rec { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 3px 9px; }
+.card p { margin: 0 2px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 2px 2px -4px; }
+
+/* Home screen of a phone */
+.home { border-radius: 14px; padding: 16px 12px 12px; background: linear-gradient(160deg, #6A7FDB 0%, #A86BC9 55%, #F09A7A 100%); display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
+.app { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.app i { width: 54px; height: 54px; border-radius: 12px; display: block; background: rgba(255,255,255,.35); }
+.app img { width: 54px; height: 54px; border-radius: 12px; display: block; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+.app span { font-size: 11px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+
+/* Welcome screen (light and dark side by side) */
+.screens { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.welcome { border-radius: 12px; padding: 18px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.welcome.light { background: #F3F6F9; color: #172033; border: 1px solid #D8DEE7; }
+.welcome.dark { background: #0C121C; color: #E9EEF5; border: 1px solid #263247; }
+.welcome img { width: 56px; height: 56px; border-radius: 15px; }
+.welcome b { font-size: 18px; }
+.welcome small { font-size: 10px; opacity: .7; line-height: 1.35; }
+
+/* Header on Hem + small sizes */
+.bar { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 10px; background: #fff; border: 1px solid #D8DEE7; color: #172033; font-weight: 800; font-size: 15px; }
+.bar img { width: 26px; height: 26px; border-radius: 7px; }
+.sizes { display: flex; align-items: flex-end; gap: 14px; padding: 4px 2px; }
+.sizes img { display: block; }
+.sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.how { margin-top: 18px; background: var(--primary-soft); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ny logga – förslag</h1>
+  <p class="lead">Din springande figur i tre varianter, plus dagens logga att jämföra med. Varje kort visar hur den ser ut på hemskärmen, på startsidan (ljust och mörkt läge), överst på Hem och i små storlekar. Svara på tavlan med <b>A</b>, <b>B</b> eller <b>C</b> – eller <b>Behåll</b>.</p>
+  <div class="grid" id="grid"></div>
+  <div class="how">
+    <b>Mitt ärliga omdöme:</b> figuren är tydlig och passar fler sporter (bra inför basket). Men den liknar många löpar- och träningsappar, och de tunna fartstrecken försvinner när loggan blir liten (se 16 px). Jag har tagit bort den mörka ramen och skuggan från din bild – telefonen rundar själv hörnen på appikonen, annars blir det en ruta i rutan.
+  </div>
+</main>
+<script>
+'use strict';
+const OPTIONS = [
+  { tag: 'A', img: 'A.png', name: 'Mörk – som din bild', text: 'Figuren på den mörka bakgrunden från din bild. Syns mycket bra på hemskärmen, men skiljer sig från appens blå färg.' },
+  { tag: 'B', img: 'B.png', name: 'Playbook-blå', rec: true, text: 'Samma figur på appens egen blå. Hänger ihop med resten av appen (knappar, rubriker), och figurens turkos lyser fortfarande.' },
+  { tag: 'C', img: 'C.png', name: 'Ljus', text: 'Ljus bakgrund och den vita delen i appens blå. Luftig, men smälter in på ljusa bakgrunder och tappar lite av glansen.' },
+  { tag: 'Nu', img: 'nu.png', name: 'Behåll dagens', text: 'Taktiktavlan med kryss och pil. Säger "planering" mer än "träning", och fungerar för alla sporter.' },
+];
+const grid = document.getElementById('grid');
+for (const o of OPTIONS) {
+  const card = document.createElement('div');
+  card.className = 'card' + (o.rec ? ' pick' : '');
+  const h = document.createElement('h2');
+  h.innerHTML = `<span class="tag">${o.tag}</span>`;
+  h.append(document.createTextNode(o.name));
+  if (o.rec) h.insertAdjacentHTML('beforeend', '<span class="rec">Playbots val</span>');
+  const p = document.createElement('p');
+  p.textContent = o.text;
+  card.append(h, p);
+  card.insertAdjacentHTML('beforeend', `
+    <div class="label">Hemskärmen</div>
+    <div class="home">
+      <div class="app"><i></i><span>Kamera</span></div>
+      <div class="app"><img src="${o.img}" alt=""><span>Playbook</span></div>
+      <div class="app"><i></i><span>Kartor</span></div>
+      <div class="app"><i></i><span>Musik</span></div>
+    </div>
+    <div class="label">Startsidan</div>
+    <div class="screens">
+      <div class="welcome light"><img src="${o.img}" alt=""><b>Playbook</b><small>Planera träningar, dela övningar och följ upp matcher.</small></div>
+      <div class="welcome dark"><img src="${o.img}" alt=""><b>Playbook</b><small>Planera träningar, dela övningar och följ upp matcher.</small></div>
+    </div>
+    <div class="label">Överst på Hem</div>
+    <div class="bar"><img src="${o.img}" alt="">Arameiska Syrianska P15</div>
+    <div class="label">Små storlekar</div>
+    <div class="sizes">
+      <figure><img src="${o.img}" width="48" height="48" style="border-radius:11px" alt="">48 px</figure>
+      <figure><img src="${o.img}" width="32" height="32" style="border-radius:7px" alt="">32 px</figure>
+      <figure><img src="${o.img}" width="16" height="16" style="border-radius:3px" alt="">16 px (flik)</figure>
+    </div>`);
+  grid.appendChild(card);
+}
+</script>
+</body>
+</html>
