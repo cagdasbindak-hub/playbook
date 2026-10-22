@@ -114,6 +114,22 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 @keyframes spin { to { transform: rotate(360deg); } }
 .error { max-width: 320px; text-align: center; font: 500 15px/1.4 var(--body); color: var(--text); padding: 0 16px; }
 
+/* Inside the app: one exercise, its name in the top bar, a close button instead of the picker. */
+.app-title { display: none; min-width: 0; margin-left: 4px; font: 600 15px/1.2 var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.close { display: none; margin-left: auto; pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); color: var(--text); font-size: 22px; line-height: 1; }
+body.app .pick, body.app .owner, body.app .chip.ghost { display: none; }
+body.app .app-title { display: block; }
+body.app .close { display: grid; place-items: center; flex-shrink: 0; }
+.rec { position: fixed; z-index: 4; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font: 600 14px/1 var(--body); background: var(--glass-strong); border: 1px solid var(--line); padding: 9px 14px; border-radius: 999px; white-space: nowrap; }
+.rec i { width: 10px; height: 10px; border-radius: 50%; background: #ff4d4d; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.2; } }
+.sheet { position: fixed; inset: 0; z-index: 6; display: grid; align-items: end; background: rgba(3, 8, 14, 0.6); }
+.sheet > div { margin: 0 auto; width: 100%; max-width: 520px; background: var(--glass-strong); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; }
+.sheet h2 { margin: 0; font: 700 20px/1.2 var(--display); letter-spacing: 0.02em; }
+.sheet p { margin: 0; color: var(--muted); font: 500 14px/1.4 var(--body); }
+.sheet button { height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass); font: 600 16px/1 var(--body); }
+.sheet button.primary { background: var(--accent); color: var(--accent-ink); border: 0; }
+
 @media (max-width: 420px) {
   .cams button { padding: 9px 8px; font-size: 13px; }
   .btn { width: 40px; height: 40px; }
@@ -130,7 +146,9 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 
 <header class="top">
   <div class="brand"><b>Playbook</b><span class="chip">3D</span><span class="chip ghost">Förslag</span></div>
+  <span class="app-title" id="appTitle"></span>
   <label class="pick"><span hidden>Välj övning</span><select id="pick" aria-label="Välj övning"></select></label>
+  <button class="close" id="close" aria-label="Stäng 3D">×</button>
 </header>
 <div class="owner"><span id="owner"></span></div>
 <div class="hint" id="hint">Dra för att vrida · nyp för att zooma</div>
@@ -144,6 +162,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
       <button class="btn play" id="play" aria-label="Spela"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
       <button class="btn" id="next" aria-label="Nästa steg"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
       <button class="btn speed" id="speed" aria-label="Hastighet">1×</button>
+      <button class="btn" id="share" aria-label="Dela som video"><svg viewBox="0 0 24 24"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6zM5 19h14v2H5z"/></svg></button>
     </div>
     <div class="cams" role="group" aria-label="Kamera">
       <button data-cam="tv" aria-pressed="true">TV</button>
@@ -154,6 +173,8 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
   </div>
 </section>
 
+<div class="rec" id="rec" hidden><i></i><span id="recText">Spelar in…</span></div>
+<div class="sheet" id="sheet" hidden><div role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><h2 id="sheetTitle"></h2><p id="sheetText"></p><button class="primary" id="sheetGo"></button><button id="sheetCancel">Stäng</button></div></div>
 <div class="loading" id="loading"><div class="spinner"></div><p>Bygger arenan…</p></div>
 
 <script type="application/json" id="data">[{"diagram":{"field":"full","pieces":[{"id":"8pz7wcx","kind":"team","label":"1","x":7.74,"y":49.24},{"id":"0m0nv76","kind":"team","label":"2","x":9.22,"y":21.32},{"id":"110q4b0","kind":"team","label":"3","x":51.99,"y":4.55},{"id":"oadsnn4","kind":"team","label":"4","x":55.83,"y":34.45},{"id":"lunig4g","kind":"team","label":"5","x":54.23,"y":61.85},{"id":"60t0kc3","kind":"keeper","label":"1","x":3.9,"y":34.26},{"id":"owkpr8z","kind":"keeper","label":"2","x":102.96,"y":32.85},{"id":"riaypav","kind":"opp","label":"1","x":49.87,"y":9.09},{"id":"175b27j","kind":"opp","label":"2","x":49.75,"y":33.42},{"id":"jjnxh92","kind":"opp","label":"3","x":48.85,"y":60.38},{"id":"lbjzx07","kind":"opp","label":"4","x":97,"y":24.08},{"id":"covzkoo","kind":"opp","label":"5","x":97,"y":43.92},{"id":"quyn5k9","kind":"ball","x":97.77,"y":32.53}],"steps":[{"moves":{"175b27j":{"pts":[{"x":51.35,"y":33.23},{"x":59.93,"y":33.23}]},"jjnxh92":{"pts":[{"x":59.1,"y":59.42}]},"quyn5k9":{"pts":[{"x":91.3,"y":25.8}]},"riaypav":{"pts":[{"x":60.06,"y":8.26}]}},"note":"Målvakt släpper boll till back samtidigt som mittfält blir spelbar"},{"moves":{"quyn5k9":{"pts":[{"x":89,"y":24.01},{"x":63.9,"y":11.4}]}},"note":"Passning till mittfält som påbörjar anfall."},{"moves":{"0m0nv76":{"pts":[{"x":22.21,"y":19.21}]},"175b27j":{"pts":[{"x":39.63,"y":33.36}]},"8pz7wcx":{"pts":[{"x":22.28,"y":47.45}]},"jjnxh92":{"pts":[{"x":37.58,"y":60.83}]},"quyn5k9":{"pts":[{"x":39.95,"y":6.53}]},"riaypav":{"pts":[{"x":45.52,"y":6.66}]}},"note":" Motståndarlagets mittfält stör men tar ej bollen "},{"moves":{"jjnxh92":{"pts":[{"x":19.78,"y":59.8}]},"quyn5k9":{"pts":[{"x":36.56,"y":32.21}]},"riaypav":{"pts":[{"x":22.47,"y":7.94}]}},"note":"Fritt anfall mot försvarsspel "},{"moves":{"quyn5k9":{"pts":[{"x":34.83,"y":31.63},{"x":29.77,"y":30.54},{"x":11.84,"y":29.77},{"x":0,"y":28.05}]}},"note":""},{"moves":{"0m0nv76":{"pts":[{"x":8.38,"y":17.1}]},"175b27j":{"pts":[{"x":42.13,"y":33.04},{"x":59.03,"y":32.66}]},"8pz7wcx":{"pts":[{"x":8.96,"y":50.46}]},"jjnxh92":{"pts":[{"x":20.93,"y":58.52},{"x":39.44,"y":58.84},{"x":54.61,"y":60.12},{"x":59.48,"y":61.53}]},"quyn5k9":{"pts":[{"x":8.32,"y":33.62}]},"riaypav":{"pts":[{"x":26.25,"y":7.94},{"x":39.5,"y":8},{"x":55.7,"y":9.41}]}},"note":"Efter avslut så börjar nästa lag förbereda sig för samma uppspel och anfall 3v2"},{"moves":{"110q4b0":{"pts":[{"x":43.79,"y":6.27}]},"lunig4g":{"pts":[{"x":44.94,"y":61.53}]},"oadsnn4":{"pts":[{"x":43.92,"y":32.34}]},"quyn5k9":{"pts":[{"x":12.42,"y":19.47}]}},"note":""},{"moves":{"quyn5k9":{"pts":[{"x":16,"y":21.13},{"x":24.77,"y":26.06},{"x":43.6,"y":32.53}]}},"note":""},{"moves":{"110q4b0":{"pts":[{"x":65.31,"y":5.44}]},"covzkoo":{"pts":[{"x":79.52,"y":44.24}]},"lbjzx07":{"pts":[{"x":80.93,"y":21.32}]},"lunig4g":{"pts":[{"x":48.47,"y":63.58},{"x":54.55,"y":64.61},{"x":65.24,"y":61.15},{"x":65.24,"y":60.32}]},"oadsnn4":{"pts":[{"x":59.29,"y":34.13}]},"quyn5k9":{"pts":[{"x":47.57,"y":33.62},{"x":62.94,"y":33.23}]}},"note":""},{"moves":{"oadsnn4":{"pts":[{"x":61.85,"y":40.53},{"x":66.52,"y":47.57},{"x":70.56,"y":51.99},{"x":78.24,"y":57.63},{"x":84.84,"y":60.44}]},"quyn5k9":{"pts":[{"x":64.99,"y":38.35},{"x":66.91,"y":56.99}]}},"note":""},{"moves":{"110q4b0":{"pts":[{"x":83.49,"y":8.39}]},"covzkoo":{"pts":[{"x":73.18,"y":45.01}]},"lbjzx07":{"pts":[{"x":75.23,"y":20.23}]},"lunig4g":{"pts":[{"x":68.57,"y":34.64}]},"quyn5k9":{"pts":[{"x":66.01,"y":53.15},{"x":66.27,"y":49.05},{"x":70.75,"y":32.08}]}},"note":""},{"moves":{"110q4b0":{"pts":[{"x":86.82,"y":9.35},{"x":89.38,"y":16.14}]},"oadsnn4":{"pts":[{"x":85.73,"y":55.83},{"x":86.24,"y":53.79},{"x":92.65,"y":43.09}]},"quyn5k9":{"pts":[{"x":89.38,"y":21.39}]}},"note":""},{"moves":{"quyn5k9":{"pts":[{"x":91.37,"y":24.78},{"x":92.33,"y":39.95}]}},"note":""},{"moves":{"quyn5k9":{"pts":[{"x":93.99,"y":39.44},{"x":103.4,"y":36.31}]}},"note":""}],"v":2},"mine":false,"name":"3 mot 2 – med målvakt och backar"},{"diagram":{"field":"full","pieces":[{"id":"s7v6blx","kind":"cone","x":44.5,"y":45.3},{"id":"qpkv40j","kind":"cone","x":31.93,"y":24.41},{"id":"z138uin","kind":"cone","x":63.54,"y":45.3},{"id":"kw84hw0","kind":"cone","x":52.5,"y":24.41},{"id":"86opnae","kind":"cone","x":73.27,"y":24.41},{"id":"7gwcths","kind":"team","label":"1","x":19.75,"y":48.51},{"id":"bd1tysu","kind":"team","label":"2","x":31.93,"y":18.83},{"id":"f6hy75w","kind":"team","label":"3","x":44.5,"y":50.51},{"id":"sd1pgql","kind":"team","label":"4","x":52.5,"y":18.83},{"id":"7pxcgj0","kind":"team","label":"5","x":63.54,"y":50.51},{"id":"ji3adck","kind":"team","label":"6","x":76.53,"y":18.83},{"id":"8vsyfz2","kind":"cone","x":23.46,"y":45.3},{"id":"8aq96x3","kind":"keeper","label":"1","x":101.28,"y":34},{"id":"3suzbr6","kind":"team","label":"7","x":8.32,"y":34},{"id":"wzmgudt","kind":"ball","x":11.99,"y":35.8}],"steps":[{"moves":{"3suzbr6":{"pts":[{"x":17.98,"y":52.18}]},"wzmgudt":{"pts":[{"x":20.7,"y":44.21}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":29.08,"y":23.45}]}},"note":""},{"moves":{"7gwcths":{"pts":[{"x":26.08,"y":30.53}]},"bd1tysu":{"pts":[{"x":35.07,"y":27.67}]},"wzmgudt":{"pts":[{"x":26.49,"y":27.6}]}},"note":""},{"moves":{"7gwcths":{"pts":[{"x":30.71,"y":21.06}]},"wzmgudt":{"pts":[{"x":33.64,"y":28.62}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":40.65,"y":45.3}]}},"note":""},{"moves":{"bd1tysu":{"pts":[{"x":37.72,"y":36.86}]},"f6hy75w":{"pts":[{"x":50.53,"y":41.35}]},"wzmgudt":{"pts":[{"x":38.81,"y":41.01}]}},"note":""},{"moves":{"bd1tysu":{"pts":[{"x":38.34,"y":40.33},{"x":44.4,"y":50.68}]},"wzmgudt":{"pts":[{"x":49.16,"y":38.97}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":50.87,"y":20.18}]}},"note":""},{"moves":{"f6hy75w":{"pts":[{"x":49.78,"y":30.05}]},"sd1pgql":{"pts":[{"x":56.38,"y":29.17}]},"wzmgudt":{"pts":[{"x":49.57,"y":27.46}]}},"note":""},{"moves":{"f6hy75w":{"pts":[{"x":52.7,"y":17.52}]},"wzmgudt":{"pts":[{"x":54.54,"y":30.94}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":55.02,"y":34.07},{"x":59.24,"y":44.28}]}},"note":""},{"moves":{"7pxcgj0":{"pts":[{"x":66.25,"y":48.71},{"x":68.91,"y":41.63}]},"sd1pgql":{"pts":[{"x":55.84,"y":37.95}]},"wzmgudt":{"pts":[{"x":56.99,"y":39.72}]}},"note":""},{"moves":{"sd1pgql":{"pts":[{"x":62.71,"y":48.64}]},"wzmgudt":{"pts":[{"x":67.96,"y":38.83}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":70.82,"y":22.63}]}},"note":""},{"moves":{"7pxcgj0":{"pts":[{"x":68.43,"y":28.35}]},"ji3adck":{"pts":[{"x":77.97,"y":28.21}]},"wzmgudt":{"pts":[{"x":68.5,"y":26.65}]}},"note":""},{"moves":{"wzmgudt":{"pts":[{"x":76.26,"y":29.71}]}},"note":""},{"moves":{"7pxcgj0":{"pts":[{"x":73.27,"y":21.47}]},"wzmgudt":{"pts":[{"x":101.66,"y":34.34}]}},"note":""},{"moves":{"3suzbr6":{"pts":[{"x":20.29,"y":48.44}]},"ji3adck":{"pts":[{"x":5.18,"y":31.89}]},"wzmgudt":{"pts":[{"x":97.24,"y":34},{"x":34.73,"y":34},{"x":6.13,"y":32.5}]}},"note":""}],"v":2},"mine":false,"name":"Stora väggspelsövningen – avslut"},{"diagram":{"field":"full","pieces":[{"id":"c1sq6ha","kind":"team","label":"1","x":36.52,"y":48.43},{"id":"rfj6s8t","kind":"team","label":"2","x":48.51,"y":27.61},{"id":"uic4g6m","kind":"team","label":"3","x":73.74,"y":45.78},{"id":"fz5hqcc","kind":"team","label":"4","x":76.4,"y":15.23},{"id":"gpo1o44","kind":"team","label":"5","x":68.34,"y":10.31},{"id":"3fu7c7t","kind":"team","label":"6","x":32.95,"y":15.23},{"id":"uc5da7w","kind":"team","label":"7","x":54.7,"y":48.43},{"id":"bxntjo8","kind":"opp","label":"1","x":52.5,"y":12.71},{"id":"sb155zq","kind":"opp","label":"2","x":21.3,"y":23.29},{"id":"1c0wp8o","kind":"opp","label":"3","x":68.34,"y":57.56},{"id":"81be3l4","kind":"opp","label":"4","x":36.52,"y":34},{"id":"qbhsnij","kind":"opp","label":"5","x":21.3,"y":53.7},{"id":"hu07u7p","kind":"opp","label":"6","x":48.51,"y":61.62},{"id":"eydalzu","kind":"opp","label":"7","x":68.34,"y":27.61},{"id":"wm41qgt","kind":"ball","x":73.74,"y":18.5}],"steps":[{"moves":{"1c0wp8o":{"pts":[{"x":67.68,"y":49.59}]},"eydalzu":{"pts":[{"x":73.13,"y":34.75}]},"uc5da7w":{"pts":[{"x":60.4,"y":38.97}]},"wm41qgt":{"pts":[{"x":72.79,"y":19.5},{"x":71.36,"y":31.68},{"x":71.43,"y":38.49},{"x":72.45,"y":43.06}]}},"note":""},{"moves":{"81be3l4":{"pts":[{"x":45.01,"y":29.03}]},"c1sq6ha":{"pts":[{"x":45.21,"y":51.57}]},"hu07u7p":{"pts":[{"x":43.51,"y":55.31}]},"wm41qgt":{"pts":[{"x":61.08,"y":38.83}]}},"note":""},{"moves":{"3fu7c7t":{"pts":[{"x":45.15,"y":3.97}]},"81be3l4":{"pts":[{"x":53.79,"y":26.78}]},"bxntjo8":{"pts":[{"x":62.78,"y":11.94}]},"eydalzu":{"pts":[{"x":75.11,"y":23.31}]},"qbhsnij":{"pts":[{"x":22.95,"y":50.89},{"x":27.85,"y":44.35},{"x":31.66,"y":33.18}]},"sb155zq":{"pts":[{"x":21.72,"y":21.13},{"x":23.83,"y":18.47},{"x":30.17,"y":13.71},{"x":34.93,"y":9.08}]},"wm41qgt":{"pts":[{"x":60.6,"y":34},{"x":61.76,"y":28.89},{"x":64.76,"y":21.88},{"x":67.34,"y":11.53}]}},"note":""},{"moves":{"rfj6s8t":{"pts":[{"x":40.04,"y":19.77}]},"sb155zq":{"pts":[{"x":41.4,"y":4.31}]},"wm41qgt":{"pts":[{"x":45.76,"y":3.15}]}},"note":""},{"moves":{"c1sq6ha":{"pts":[{"x":23.56,"y":41.29}]},"gpo1o44":{"pts":[{"x":61.49,"y":20.72}]},"qbhsnij":{"pts":[{"x":34.8,"y":21.27}]},"uc5da7w":{"pts":[{"x":56.52,"y":39.72},{"x":43.24,"y":40.4}]},"uic4g6m":{"pts":[{"x":61.28,"y":38.02}]},"wm41qgt":{"pts":[{"x":44.81,"y":6.63},{"x":40.92,"y":17.39}]}},"note":""},{"moves":{"81be3l4":{"pts":[{"x":42.49,"y":31.48}]},"qbhsnij":{"pts":[{"x":22.06,"y":23.51}]},"wm41qgt":{"pts":[{"x":41.88,"y":29.3}]}},"note":""},{"moves":{"bxntjo8":{"pts":[{"x":50.53,"y":12.28}]},"c1sq6ha":{"pts":[{"x":20.84,"y":33.18}]},"hu07u7p":{"pts":[{"x":30.78,"y":54.09}]},"sb155zq":{"pts":[{"x":36.7,"y":6.63},{"x":23.08,"y":8.19}]},"wm41qgt":{"pts":[{"x":32.82,"y":27.94},{"x":23.36,"y":25.28}]}},"note":""},{"moves":{"1c0wp8o":{"pts":[{"x":68.71,"y":55.38},{"x":69.8,"y":60.62}]},"uc5da7w":{"pts":[{"x":44.81,"y":48.3}]},"uic4g6m":{"pts":[{"x":61.22,"y":46.39}]},"wm41qgt":{"pts":[{"x":23.22,"y":28.76},{"x":27.71,"y":40.54},{"x":29.48,"y":49.32}]}},"note":""},{"moves":{"81be3l4":{"pts":[{"x":67.96,"y":32.37}]},"eydalzu":{"pts":[{"x":91.18,"y":37.27}]},"fz5hqcc":{"pts":[{"x":85.93,"y":22.97}]},"uic4g6m":{"pts":[{"x":68.5,"y":48.98}]},"wm41qgt":{"pts":[{"x":34.93,"y":50.89},{"x":57.2,"y":57.36},{"x":67.28,"y":58.65}]}},"note":""},{"moves":{"wm41qgt":{"pts":[{"x":67.89,"y":56.13},{"x":82.46,"y":44.15},{"x":87.57,"y":38.09}]}},"note":""},{"moves":{"bxntjo8":{"pts":[{"x":54.47,"y":11.73},{"x":56.52,"y":11.39},{"x":67.41,"y":5.88}]},"hu07u7p":{"pts":[{"x":34.8,"y":54.77},{"x":42.15,"y":55.25},{"x":47.73,"y":58.99},{"x":54,"y":60.76}]},"qbhsnij":{"pts":[{"x":26.01,"y":25.42},{"x":33.98,"y":29.71},{"x":46.1,"y":33.8},{"x":46.1,"y":32.91}]},"wm41qgt":{"pts":[{"x":81.85,"y":34.75},{"x":68.57,"y":32.5}]}},"note":""}],"v":2},"mine":false,"name":"Possession"},{"diagram":{"field":"full","pieces":[{"id":"tnu1isq","kind":"cone","x":76.78,"y":48.77},{"id":"yomf0sg","kind":"cone","x":69.66,"y":34},{"id":"pj5pyiy","kind":"cone","x":76.78,"y":16.64},{"id":"jggjeae","kind":"cone","x":82.2,"y":34},{"id":"2q82f1s","kind":"team","label":"1","x":50.27,"y":34},{"id":"4cby4n4","kind":"team","label":"2","x":74.28,"y":34},{"id":"zxxohwn","kind":"team","label":"3","x":86.82,"y":34},{"id":"y91l1o3","kind":"ball","x":54.89,"y":34}],"steps":[{"moves":{"y91l1o3":{"pts":[{"x":68.43,"y":34}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":53.66,"y":33.66}]},"zxxohwn":{"pts":[{"x":78.51,"y":53.68}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":56.99,"y":36.59},{"x":73.81,"y":51.84}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":52.98,"y":34.34}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":70,"y":33.86}]},"zxxohwn":{"pts":[{"x":86.55,"y":34.27}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":51.75,"y":34},{"x":50.25,"y":32.77}]},"zxxohwn":{"pts":[{"x":76.95,"y":12.28}]}},"note":""},{"moves":{},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":72.66,"y":13.5}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":70.54,"y":15.27},{"x":53.86,"y":31.14}]},"zxxohwn":{"pts":[{"x":85.46,"y":33.18}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":54.61,"y":31.34},{"x":59.17,"y":31.41},{"x":69.32,"y":33.93}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":52.36,"y":33.86}]},"zxxohwn":{"pts":[{"x":76.88,"y":53.68}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":52.64,"y":36.32},{"x":60.81,"y":43.74},{"x":72.11,"y":52.11}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":53.18,"y":34.48}]},"zxxohwn":{"pts":[{"x":86.89,"y":32.03}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":54.34,"y":33.93},{"x":68.64,"y":34.07}]},"zxxohwn":{"pts":[{"x":78.58,"y":11.73}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":51.41,"y":33.86}]}},"note":""},{"moves":{"y91l1o3":{"pts":[{"x":51.07,"y":32.16},{"x":76.74,"y":12.89}]}},"note":""}],"v":2},"mine":false,"name":"Triangelpassning med löpning"},{"diagram":{"field":"half","pieces":[{"id":"b65py0z","kind":"ladder","sz":3,"x":18.37,"y":14.92},{"id":"5kq9pin","kind":"team","label":"1","x":19.65,"y":4.42},{"id":"cbnoz6e","kind":"ball","x":16.26,"y":5.95},{"id":"mxoe6h1","kind":"cone","x":30.16,"y":38.42},{"id":"0psyh32","kind":"cone","x":8.96,"y":41.49},{"id":"2fb3d7f","kind":"cone","x":18.37,"y":27.85}],"steps":[{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":5.95},{"x":19.65,"y":8.96}],"style":"dribble"},"cbnoz6e":{"pts":[{"x":16.26,"y":8.96}]}},"note":""},{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":12.49}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":19.65,"y":15.76}]}},"note":""},{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":14.92}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":19.65,"y":18.19}]}},"note":""},{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":18.12}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":19.65,"y":21.39}]}},"note":""},{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":20.81}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":19.65,"y":24.08}]}},"note":""},{"moves":{"5kq9pin":{"pts":[{"x":19.65,"y":23.05}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":19.65,"y":26.32}]}},"note":""},{"moves":{"2fb3d7f":{"pts":[{"x":18.95,"y":29.71}]},"5kq9pin":{"pts":[{"x":23.69,"y":30.16}],"style":"dribble"},"cbnoz6e":{"pts":[{"x":22.22,"y":30.09}]}},"note":"Efter stegen så gör du en kroppsfint till valfri sida (nästa gång byter du sida). "},{"moves":{"5kq9pin":{"pts":[{"x":28.81,"y":35.79}],"style":"dribble"},"cbnoz6e":{"pts":[{"x":25.35,"y":36.05}]}},"note":"Gör en helikopterfint innan sista konan.  "},{"moves":{"5kq9pin":{"pts":[{"x":34.57,"y":37.65}],"style":"dribble"},"cbnoz6e":{"follows":"5kq9pin","pts":[{"x":37.68,"y":38.65}]}},"note":"Vid sista konan, gör en Cruijff fint och spring snabbt med bollen tillbaka i led. "},{"moves":{"5kq9pin":{"pts":[{"x":24.78,"y":6.34}]},"cbnoz6e":{"pts":[{"x":24.59,"y":6.6}]}},"note":""}],"v":2},"mine":false,"name":"Stege med boll"},{"diagram":{"field":"half","note":"Vinnare upp, förlorare ner – vem slutar i Champions League?","pieces":[{"id":"8fnbfvm","kind":"cone","x":14,"y":4},{"id":"fdga9q3","kind":"cone","x":34,"y":4},{"id":"74dnu2m","kind":"cone","x":34,"y":16},{"id":"gi8qus5","kind":"cone","x":14,"y":16},{"id":"sdjdq0i","kind":"minigoal","rot":180,"x":14,"y":10},{"id":"sarvv38","kind":"minigoal","rot":0,"x":34,"y":10},{"id":"a1fxl4h","kind":"cone","x":14,"y":20},{"id":"6blr0t9","kind":"cone","x":34,"y":20},{"id":"nlgln2w","kind":"cone","x":34,"y":32},{"id":"wcwjgi2","kind":"cone","x":14,"y":32},{"id":"0m4y0h1","kind":"minigoal","rot":180,"x":14,"y":26},{"id":"bxm3x6p","kind":"minigoal","rot":0,"x":34,"y":26},{"id":"mlub7bw","kind":"cone","x":14,"y":36},{"id":"mkmwpws","kind":"cone","x":34,"y":36},{"id":"r48sjyh","kind":"cone","x":34,"y":48},{"id":"ct7wtod","kind":"cone","x":14,"y":48},{"id":"2aqzgsj","kind":"minigoal","rot":180,"x":14,"y":42},{"id":"1uw4mt7","kind":"minigoal","rot":0,"x":34,"y":42},{"id":"2g8zemh","kind":"cone","x":14,"y":52},{"id":"x0aoyko","kind":"cone","x":34,"y":52},{"id":"qltnbzx","kind":"cone","x":34,"y":64},{"id":"n64u9nh","kind":"cone","x":14,"y":64},{"id":"r5v351v","kind":"minigoal","rot":180,"x":14,"y":58},{"id":"n6pzor6","kind":"minigoal","rot":0,"x":34,"y":58},{"id":"c2t3eq6","kind":"team","label":"1","x":21,"y":10},{"id":"40nh878","kind":"opp","label":"2","x":27,"y":10},{"id":"d8olllc","kind":"ball","x":22,"y":10.3},{"id":"8wwpkv4","kind":"team","label":"3","x":21,"y":26},{"id":"sjbilhf","kind":"opp","label":"4","x":27,"y":26},{"id":"cjx6pzp","kind":"ball","x":22,"y":26.3},{"id":"qji1bie","kind":"team","label":"5","x":21,"y":42},{"id":"nhk8u1z","kind":"opp","label":"6","x":27,"y":42},{"id":"3dpsbhh","kind":"ball","x":22,"y":42.3},{"id":"dalfyb4","kind":"team","label":"7","x":21,"y":58},{"id":"jgqu256","kind":"opp","label":"8","x":27,"y":58},{"id":"j8u80jr","kind":"ball","x":22,"y":58.3}],"steps":[{"moves":{"3dpsbhh":{"follows":"qji1bie","pts":[{"x":26.77,"y":45.46},{"x":31.84,"y":42.67}]},"40nh878":{"pts":[{"x":27,"y":9.5}]},"c2t3eq6":{"pts":[{"x":25,"y":8},{"x":30,"y":9}],"style":"dribble"},"cjx6pzp":{"pts":[{"x":14.6,"y":26.2}]},"d8olllc":{"follows":"c2t3eq6","pts":[{"x":25.8,"y":7.6},{"x":30.88,"y":9.18}]},"dalfyb4":{"pts":[{"x":24,"y":61}],"style":"dribble"},"j8u80jr":{"follows":"dalfyb4","pts":[{"x":24.64,"y":61.64}]},"jgqu256":{"pts":[{"x":25,"y":59.5}]},"nhk8u1z":{"pts":[{"x":27.5,"y":44}]},"qji1bie":{"pts":[{"x":26,"y":45},{"x":31,"y":43}],"style":"dribble"},"sjbilhf":{"pts":[{"x":20,"y":25}]}},"note":"1 mot 1 i 90 sekunder på varje plan. Mål i det lilla målet = 1 poäng."},{"moves":{"40nh878":{"pts":[{"x":25,"y":18},{"x":24,"y":25}]},"8wwpkv4":{"pts":[{"x":22,"y":34},{"x":21,"y":41}]},"qji1bie":{"pts":[{"x":33,"y":36},{"x":28,"y":27}]},"sjbilhf":{"pts":[{"x":26,"y":18},{"x":27,"y":11}]}},"note":"Vinnaren flyttar upp en plan mot Champions League (överst) – förloraren flyttar ner."}],"v":2},"mine":true,"name":"1 mot 1 – Champions League"},{"diagram":{"field":"half","note":"Läs försvararen – passa eller dribbla?","pieces":[{"id":"0k2uo20","kind":"goal","rot":0,"x":52.5,"y":34},{"id":"w6tggwo","kind":"keeper","label":"1","x":51,"y":34},{"id":"f777ytk","kind":"cone","x":22,"y":26},{"id":"dknl299","kind":"cone","x":50,"y":26},{"id":"8oeuat6","kind":"cone","x":50,"y":42},{"id":"639ge7y","kind":"cone","x":22,"y":42},{"id":"1toqfqa","kind":"cone","x":36,"y":26},{"id":"8y93nxq","kind":"cone","x":36,"y":42},{"id":"e3e3qjg","kind":"team","label":"7","x":22,"y":29},{"id":"7rqx77q","kind":"team","label":"9","x":23,"y":39},{"id":"82xzrij","kind":"opp","label":"4","x":36,"y":34},{"id":"2l3zxb3","kind":"ball","x":23,"y":29.3}],"steps":[{"moves":{"2l3zxb3":{"pts":[{"x":22.8,"y":38.4}]},"82xzrij":{"pts":[{"x":31.5,"y":36.5}]}},"note":"Första anfallaren passar till den andra – då får försvararen gå på."},{"moves":{"2l3zxb3":{"follows":"7rqx77q","pts":[{"x":29.39,"y":38.19}]},"7rqx77q":{"pts":[{"x":28.5,"y":38.3}],"style":"dribble"},"82xzrij":{"pts":[{"x":30,"y":37.6}]},"e3e3qjg":{"pts":[{"x":27,"y":30},{"x":32,"y":30.5}]}},"note":"Den med bollen driver rakt mot försvararen – kompisen håller avstånd och är spelbar."},{"moves":{"2l3zxb3":{"pts":[{"x":34,"y":31}]},"7rqx77q":{"pts":[{"x":31,"y":37}]},"e3e3qjg":{"pts":[{"x":35.5,"y":30.8}]}},"note":"Försvararen går på bollföraren – passa till den fria! (Stannar försvararen hos kompisen: dribbla själv.)"},{"moves":{"2l3zxb3":{"follows":"e3e3qjg","pts":[{"x":41.89,"y":31.61}]},"e3e3qjg":{"pts":[{"x":41,"y":31.5}],"style":"dribble"}},"note":"Förbi försvararens halva – fritt mot målvakten. Avslut!"},{"moves":{"2l3zxb3":{"pts":[{"x":51.6,"y":35.6}]},"w6tggwo":{"pts":[{"x":51.2,"y":33.3}]}},"note":"Mål! Byt roller efter varje försök."}],"v":2},"mine":true,"name":"2 mot 1 – passa eller dribbla?"},{"diagram":{"field":"area","note":"Håll bollen – och spela över mitten när läget finns.","pieces":[{"h":18,"id":"fl6ufbt","kind":"zone","w":10,"x":10,"y":15},{"h":18,"id":"bchdvnn","kind":"zone","w":10,"x":30,"y":15},{"id":"pswai2v","kind":"cone","x":5,"y":6},{"id":"zaua8we","kind":"cone","x":35,"y":6},{"id":"bj1635s","kind":"cone","x":35,"y":24},{"id":"57ocuen","kind":"cone","x":5,"y":24},{"id":"uiegp6l","kind":"cone","x":15,"y":6},{"id":"32xrjix","kind":"cone","x":15,"y":24},{"id":"gltr07o","kind":"cone","x":25,"y":6},{"id":"e6fcb5s","kind":"cone","x":25,"y":24},{"id":"lxx7d33","kind":"team","label":"2","x":6.5,"y":8},{"id":"5wej8n1","kind":"team","label":"3","x":13.5,"y":9},{"id":"xf8romv","kind":"team","label":"4","x":7,"y":21},{"id":"xgunzyb","kind":"team","label":"5","x":13,"y":22},{"id":"sr34di5","kind":"team","label":"6","x":27,"y":8},{"id":"pda2hf9","kind":"team","label":"7","x":33.5,"y":9},{"id":"e3catfs","kind":"team","label":"8","x":27,"y":21.5},{"id":"2kl334h","kind":"team","label":"9","x":33,"y":22},{"id":"3iys2rt","kind":"opp","label":"3","x":12,"y":14},{"id":"t42mjum","kind":"opp","label":"4","x":9,"y":16},{"id":"fv7nvzc","kind":"opp","label":"5","x":20,"y":11},{"id":"j3sm7o9","kind":"opp","label":"6","x":20,"y":19},{"id":"2nwm61y","kind":"ball","x":7.3,"y":8.7}],"steps":[{"moves":{"2nwm61y":{"pts":[{"x":13,"y":21.4}]},"3iys2rt":{"pts":[{"x":12,"y":18.5}]},"t42mjum":{"pts":[{"x":8.5,"y":13}]}},"note":"Spelet startar i en ytterzon. Två röda pressar där, två röda står i mitten och läser passningar."},{"moves":{"2nwm61y":{"pts":[{"x":13.2,"y":9.6}]},"3iys2rt":{"pts":[{"x":12.5,"y":12}]},"fv7nvzc":{"pts":[{"x":20,"y":12.5}]}},"note":"Blå håller bollen: fyra passningar i rad = 1 poäng."},{"moves":{"2nwm61y":{"pts":[{"x":26.4,"y":20.9}]},"j3sm7o9":{"pts":[{"x":21,"y":17.5}]}},"note":"Läge? Spela över mittzonen till andra sidan = 1 poäng."},{"moves":{"3iys2rt":{"pts":[{"x":19.5,"y":11}]},"fv7nvzc":{"pts":[{"x":28,"y":13}]},"j3sm7o9":{"pts":[{"x":29.5,"y":19}]},"t42mjum":{"pts":[{"x":19.5,"y":19}]}},"note":"Nu går de två röda från mitten in och pressar – de andra två backar till mitten."}],"v":2},"mine":true,"name":"Tre zoner – spela över mitten"},{"diagram":{"field":"area","note":"Ta dig över – utan att hajarna tar bollen.","pieces":[{"id":"hq3vilj","kind":"cone","x":10,"y":5},{"id":"raw9qmd","kind":"cone","x":30,"y":5},{"id":"5fa4khk","kind":"cone","x":30,"y":25},{"id":"0q0t0i0","kind":"cone","x":10,"y":25},{"id":"qgd0h5e","kind":"team","label":"6","x":10,"y":8},{"id":"7eullr5","kind":"team","label":"7","x":10,"y":12.5},{"id":"tbgqo7o","kind":"team","label":"8","x":10,"y":17.5},{"id":"cem2kor","kind":"team","label":"9","x":10,"y":22},{"id":"72np6pv","kind":"ball","x":11,"y":8.3},{"id":"6iwn816","kind":"ball","x":11,"y":12.8},{"id":"v9qrvt0","kind":"ball","x":11,"y":17.8},{"id":"khd3p9x","kind":"ball","x":11,"y":22.3},{"id":"29dsfnk","kind":"opp","label":"4","x":20,"y":11},{"id":"lpzz3bm","kind":"opp","label":"5","x":20,"y":19}],"steps":[{"moves":{"29dsfnk":{"pts":[{"x":18.5,"y":10.5}]},"6iwn816":{"follows":"7eullr5","pts":[{"x":17.4,"y":13.07}]},"72np6pv":{"follows":"qgd0h5e","pts":[{"x":16.9,"y":8.57}]},"7eullr5":{"pts":[{"x":16.5,"y":13}],"style":"dribble"},"cem2kor":{"pts":[{"x":16,"y":22.5}],"style":"dribble"},"khd3p9x":{"follows":"cem2kor","pts":[{"x":16.9,"y":22.57}]},"lpzz3bm":{"pts":[{"x":18.5,"y":18.5}]},"qgd0h5e":{"pts":[{"x":16,"y":8.5}],"style":"dribble"},"tbgqo7o":{"pts":[{"x":15.5,"y":17}],"style":"dribble"},"v9qrvt0":{"follows":"tbgqo7o","pts":[{"x":16.4,"y":16.92}]}},"note":"På signal dribblar alla över till andra sidan. Hajarna i mitten försöker sparka ut bollarna."},{"moves":{"29dsfnk":{"pts":[{"x":20,"y":12.5}]},"6iwn816":{"follows":"7eullr5","pts":[{"x":22.85,"y":15.31},{"x":29.89,"y":13.87}]},"72np6pv":{"follows":"qgd0h5e","pts":[{"x":21.84,"y":6.17},{"x":29.9,"y":7.06}]},"7eullr5":{"pts":[{"x":22,"y":15},{"x":29,"y":14}],"style":"dribble"},"cem2kor":{"pts":[{"x":23,"y":23},{"x":29,"y":21.5}],"style":"dribble"},"khd3p9x":{"follows":"cem2kor","pts":[{"x":23.9,"y":23.06},{"x":29.87,"y":21.28}]},"lpzz3bm":{"pts":[{"x":17,"y":17.5}]},"qgd0h5e":{"pts":[{"x":21,"y":6.5},{"x":29,"y":7}],"style":"dribble"},"v9qrvt0":{"pts":[{"x":21,"y":27.5}]}},"note":"Fint och fart förbi hajen – kroppen mellan hajen och bollen."},{"moves":{"tbgqo7o":{"pts":[{"x":18,"y":15}]}},"note":"Den som tappar bollen blir också haj. Sist kvar vinner!"}],"v":2},"mine":true,"name":"Hajarna – dribbla under press"}]</script>
@@ -171,7 +192,22 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const DRAWINGS = JSON.parse(document.getElementById('data').textContent);
+// In the app (?app=1) the page shows the one exercise the app handed over; on its own it shows the examples.
+const APP = new URLSearchParams(location.search).has('app');
+let DRAWINGS = JSON.parse(document.getElementById('data').textContent);
+if (APP) {
+  document.body.classList.add('app');
+  try {
+    const d = JSON.parse(localStorage.getItem('playbook.3d') || 'null');
+    DRAWINGS = d && d.diagram ? [{ name: d.name || 'Övningen', diagram: d.diagram }] : [];
+  } catch { DRAWINGS = []; }
+  document.getElementById('appTitle').textContent = DRAWINGS[0]?.name ?? '';
+}
+document.getElementById('close').addEventListener('click', () => {
+  if (window.parent !== window) window.parent.postMessage({ type: 'playbook-3d-close' }, location.origin);
+  else history.back();
+});
+if (!DRAWINGS.length) { window.__fail('Det finns ingen övning att visa i 3D. Stäng och tryck på 3D igen.'); throw new Error('no drawing'); }
 const FIELD = { full: { w: 105, h: 68 }, half: { w: 52.5, h: 68 }, area: { w: 40, h: 30 } };
 const KIT = {
   team: { shirt: 0x1f5fae, shorts: 0x1d2433, socks: 0x1f5fae, badge: '#1F5FAE', run: 0x8ec5ff },
@@ -787,7 +823,7 @@ function load(index) {
   t = 0;
   buildTicks();
   const d = DRAWINGS[index];
-  document.getElementById('owner').textContent = d.mine ? 'Ny övning från Playbot' : 'Er ritning';
+  document.getElementById('owner').textContent = APP ? '' : d.mine ? 'Ny övning från Playbot' : 'Er ritning';
   setCamera(camMode, false);
   render(0, true);
 }
@@ -996,8 +1032,11 @@ function loop(now) {
   lastTime = now;
   if (degraded < 2) adapt(now);
   if (playing && !scrubbing) {
-    t += dt * speed;
-    if (t > current.total) t = 0;
+    t += recording ? dt : dt * speed;
+    if (t > current.total) {
+      if (recording) { t = current.total; finishRecording(); }
+      else t = 0;
+    }
   }
   render(dt);
   if (camT < 1) {
@@ -1015,6 +1054,7 @@ function loop(now) {
   }
   controls.update();
   renderer.render(scene, camera);
+  if (recording) paintVideoFrame();
   if (!window.__ready) {
     window.__ready = true;
     const l = document.getElementById('loading');
@@ -1024,6 +1064,116 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// ───────────────────────────────────────────────────────────── share as video (Shabo 2026-10-22)
+// The pitch plus a TV-style caption is painted onto a second canvas, which is recorded from start to end of the drill.
+let recording = null;
+let lastVideo = null;
+function paintVideoFrame() {
+  const { g, out } = recording;
+  const W = out.width, H = out.height;
+  g.drawImage(renderer.domElement, 0, 0, W, H);
+  const u = W / 390; // the caption scales with the video
+  const pad = 14 * u, boxH = 54 * u, y = H - boxH - 18 * u;
+  const n = current.steps.length;
+  const idx = current.steps.findIndex((s) => t >= s.start && t <= s.end + 0.55);
+  const started = n && t >= current.steps[0].start;
+  const badge = !started ? 'START' : idx >= 0 ? `${idx + 1}/${n}` : 'KLART';
+  const note = !started ? current.drawing.name : idx >= 0 ? current.steps[idx].note || current.drawing.name : current.drawing.name;
+  g.fillStyle = 'rgba(9,18,29,0.9)';
+  g.fillRect(pad, y, W - pad * 2, boxH);
+  g.fillStyle = '#5AA9F0';
+  g.fillRect(pad, y, 64 * u, boxH);
+  g.fillStyle = '#06121F';
+  g.font = `700 ${17 * u}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(badge, pad + 32 * u, y + boxH / 2);
+  g.textAlign = 'left';
+  g.fillStyle = '#F3F7FB';
+  g.font = `500 ${15 * u}px "Barlow", system-ui, sans-serif`;
+  const maxW = W - pad * 2 - 64 * u - 24 * u;
+  const words = String(note).split(/\s+/);
+  const lines = [''];
+  for (const w of words) {
+    const tryLine = lines[lines.length - 1] ? lines[lines.length - 1] + ' ' + w : w;
+    if (g.measureText(tryLine).width > maxW && lines[lines.length - 1]) { if (lines.length === 2) { lines[1] += '…'; break; } lines.push(w); }
+    else lines[lines.length - 1] = tryLine;
+  }
+  lines.forEach((l, i) => g.fillText(l, pad + 76 * u, y + boxH / 2 + (i - (lines.length - 1) / 2) * 18 * u));
+  g.font = `700 ${16 * u}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.fillText('PLAYBOOK', pad, 26 * u);
+  const left = Math.max(0, Math.ceil(current.total - t));
+  document.getElementById('recText').textContent = `Spelar in video… ${left} s kvar`;
+}
+function startRecording() {
+  const src = renderer.domElement;
+  const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  const type = typeof MediaRecorder !== 'undefined' ? types.find((x) => MediaRecorder.isTypeSupported(x)) : undefined;
+  const out = document.createElement('canvas');
+  if (!type || !out.captureStream) return showSheet('Video går inte här', 'Den här webbläsaren kan inte spela in video. Prova Safari eller Chrome i en nyare version.', null);
+  const scale = Math.min(1, 1080 / src.width);
+  out.width = Math.round((src.width * scale) / 2) * 2;
+  out.height = Math.round((src.height * scale) / 2) * 2;
+  const g = out.getContext('2d');
+  const rec = new MediaRecorder(out.captureStream(30), { mimeType: type, videoBitsPerSecond: 6e6 });
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    lastVideo = new File([new Blob(chunks, { type })], `${slug(current.drawing.name)}-3d.${type.includes('mp4') ? 'mp4' : 'webm'}`, { type });
+    showSheet('Videon är klar', 'Skicka den till föräldrarna eller laget, t.ex. i WhatsApp – eller spara den.', shareVideo);
+  };
+  recording = { g, out, rec };
+  for (const th of Object.values(things)) th.last = null;
+  t = 0;
+  setPlaying(true);
+  document.getElementById('rec').hidden = false;
+  rec.start(250);
+}
+function finishRecording() {
+  const r = recording;
+  recording = null;
+  document.getElementById('rec').hidden = true;
+  setPlaying(false);
+  setTimeout(() => r.rec.state !== 'inactive' && r.rec.stop(), 300);
+}
+async function shareVideo() {
+  if (!lastVideo) return;
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [lastVideo] })) {
+      await navigator.share({ files: [lastVideo], title: current.drawing.name });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastVideo);
+  a.download = lastVideo.name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+function slug(x) {
+  return (x || 'ovning').toLowerCase().replace(/[åä]/g, 'a').replace(/ö/g, 'o').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ovning';
+}
+function showSheet(title, text, action) {
+  const sh = document.getElementById('sheet');
+  document.getElementById('sheetTitle').textContent = title;
+  document.getElementById('sheetText').textContent = text;
+  const go = document.getElementById('sheetGo');
+  go.hidden = !action;
+  go.textContent = 'Dela video';
+  go.onclick = () => { sh.hidden = true; action?.(); };
+  sh.hidden = false;
+}
+document.getElementById('sheetCancel').addEventListener('click', () => { document.getElementById('sheet').hidden = true; });
+document.getElementById('share').addEventListener('click', () => {
+  if (recording) return;
+  if (lastVideo && lastVideo.name.startsWith(slug(current.drawing.name))) return showSheet('Videon är klar', 'Skicka den till föräldrarna eller laget, t.ex. i WhatsApp – eller spara den.', shareVideo);
+  showSheet('Dela som video', `Övningen spelas upp från början och sparas som en video med stegtexterna (cirka ${Math.ceil(current.total)} sekunder). Välj kameravinkel först om du vill.`, () => startRecording());
+  document.getElementById('sheetGo').textContent = 'Spela in';
+});
+
 // ───────────────────────────────────────────────────────────── UI
 const pick = document.getElementById('pick');
 DRAWINGS.forEach((d, i) => {
@@ -1032,7 +1182,7 @@ DRAWINGS.forEach((d, i) => {
   o.textContent = d.name;
   pick.appendChild(o);
 });
-pick.addEventListener('change', () => { load(Number(pick.value)); setPlaying(!reduceMotion); });
+pick.addEventListener('change', () => { if (recording) finishRecording(); lastVideo = null; load(Number(pick.value)); setPlaying(!reduceMotion); });
 
 const playBtn = document.getElementById('play');
 function setPlaying(v) {
@@ -1084,7 +1234,7 @@ document.addEventListener('visibilitychange', () => { lastTime = performance.now
 // Start with the team's own "3 mot 2" (the first drawing) once the broadcast font is in (max 1.5 s).
 setPlaying(playing);
 // Local testing only: a handle for checking camera and pieces from the console.
-if (location.hostname === 'localhost') window.__dbg = { camera, controls, things: () => things, THREE, setT: (v) => { t = v; }, pause: () => setPlaying(false) };
+if (location.hostname === 'localhost') window.__dbg = { camera, controls, things: () => things, THREE, setT: (v) => { t = v; }, pause: () => setPlaying(false), video: () => lastVideo && { name: lastVideo.name, size: lastVideo.size, type: lastVideo.type }, videoUrl: () => lastVideo && URL.createObjectURL(lastVideo) };
 Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1500))])
   .catch(() => {})
   .then(() => {
