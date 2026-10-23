@@ -468,98 +468,94 @@ function toWorld(x, y, field = current.field) {
 const SKIN = 0xe8b98c;
 const HAIR = [0x2b1d14, 0x3b2a1e, 0x14100c, 0x6b4a2b];
 
-function numberTexture(text, bg) {
+/** The number on the back of the shirt (Shabo 2026-10-22: no big badge over the head – the number sits on the back). */
+function shirtNumber(text, dark) {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
-  g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2);
-  g.fillStyle = bg; g.fill();
-  g.lineWidth = 8; g.strokeStyle = 'rgba(255,255,255,0.95)'; g.stroke();
-  g.fillStyle = '#ffffff';
-  g.font = `700 ${String(text).length > 1 ? 58 : 70}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+  g.font = '700 96px "Barlow Condensed", "Arial Narrow", Arial, sans-serif';
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(text, 64, 68);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function shirtNumber(text) {
-  const c = document.createElement('canvas');
-  c.width = 128; c.height = 128;
-  const g = c.getContext('2d');
-  g.fillStyle = '#ffffff';
-  g.font = '700 92px "Barlow Condensed", "Arial Narrow", Arial, sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 8;
+  g.strokeStyle = dark ? 'rgba(255,255,255,0.6)' : 'rgba(10,20,35,0.55)';
+  g.strokeText(text, 64, 70);
+  g.fillStyle = dark ? '#14213a' : '#ffffff';
   g.fillText(text, 64, 70);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
+// A tapered upper body: hips, waist, chest and shoulders (radius, height).
+const TORSO = new THREE.LatheGeometry(
+  [[0.15, 0], [0.165, 0.05], [0.155, 0.17], [0.175, 0.3], [0.205, 0.42], [0.21, 0.47], [0.17, 0.53], [0.06, 0.56]].map(([r, y]) => new THREE.Vector2(r, y)),
+  22
+);
+
 function makePlayer(p) {
   const kit = KIT[p.kind];
-  const s = (p.sz || 1) * 1.08;
+  // Larger than life, so the drill reads from the TV camera (Shabo 2026-10-22: "Gör dom större").
+  const s = (p.sz || 1) * 1.9;
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
   const mat = (color, rough = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: rough });
-  const shirt = mat(kit.shirt, 0.6), shorts = mat(kit.shorts), socks = mat(kit.socks), skin = mat(SKIN, 0.8), boot = mat(0x111111, 0.4);
+  const shirt = mat(kit.shirt, 0.55), shorts = mat(kit.shorts, 0.6), socks = mat(kit.socks, 0.7), skin = mat(SKIN, 0.75);
+  const boot = mat(0x121212, 0.35), stripe = mat(0xffffff, 0.6);
+  const hands = p.kind === 'keeper' ? mat(0xf4f4f4, 0.5) : skin;
   const cast = (m) => { m.castShadow = true; return m; };
+  const mesh = (geo, m, y = 0, z = 0) => { const o = cast(new THREE.Mesh(geo, m)); o.position.set(0, y, z); return o; };
 
-  const legs = [];
+  const legs = [], knees = [];
   for (const side of [-1, 1]) {
     const hip = new THREE.Group();
-    hip.position.set(0.11 * side, 0.8, 0);
-    const thigh = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.26, 4, 8), skin));
-    thigh.position.y = -0.2;
-    const leg = cast(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.095, 0.24, 12), shorts));
-    leg.position.y = -0.1;
-    const shin = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.3, 4, 8), socks));
-    shin.position.y = -0.55;
-    const foot = cast(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.24), boot));
-    foot.position.set(0, -0.76, 0.05);
-    hip.add(thigh, leg, shin, foot);
+    hip.position.set(0.095 * side, 0.82, 0);
+    hip.add(mesh(new THREE.CylinderGeometry(0.1, 0.095, 0.22, 14), shorts, -0.06));
+    hip.add(mesh(new THREE.CapsuleGeometry(0.066, 0.2, 4, 10), skin, -0.26));
+    const knee = new THREE.Group();
+    knee.position.y = -0.4;
+    knee.add(mesh(new THREE.CapsuleGeometry(0.058, 0.26, 4, 10), socks, -0.17));
+    knee.add(mesh(new THREE.CylinderGeometry(0.063, 0.063, 0.035, 12), stripe, -0.05));
+    const shoe = mesh(new THREE.BoxGeometry(0.1, 0.07, 0.24), boot, -0.37, 0.05);
+    knee.add(shoe);
+    hip.add(knee);
     body.add(hip);
-    legs.push(hip);
+    legs.push(hip); knees.push(knee);
   }
-  const pants = cast(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.14, 14), shorts));
-  pants.position.y = 0.9;
-  const torso = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.36, 6, 14), shirt));
-  torso.position.y = 1.2;
-  torso.scale.set(1, 1, 0.74);
-  const arms = [];
+  body.add(mesh(new THREE.CylinderGeometry(0.152, 0.175, 0.14, 18), shorts, 0.87));
+  const torso = mesh(TORSO, shirt, 0.88);
+  torso.scale.set(1, 1, 0.7);
+  body.add(torso);
+  body.add(mesh(new THREE.CylinderGeometry(0.048, 0.055, 0.09, 12), skin, 1.47));
+  const head = mesh(new THREE.SphereGeometry(0.115, 20, 16), skin, 1.6);
+  head.scale.set(0.95, 1.08, 1);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.122, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), mat(HAIR[Math.floor(Math.random() * HAIR.length)], 0.9));
+  hair.position.set(0, 1.615, -0.008);
+  hair.scale.set(0.97, 1.08, 1.02);
+  body.add(head, hair);
+
+  const arms = [], elbows = [];
   for (const side of [-1, 1]) {
     const sh = new THREE.Group();
-    sh.position.set(0.27 * side, 1.4, 0);
-    const sleeve = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.12, 4, 8), shirt));
-    sleeve.position.y = -0.1;
-    const arm = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.32, 4, 8), p.kind === 'keeper' ? mat(0xf7f7f7) : skin));
-    arm.position.y = -0.36;
-    sh.add(sleeve, arm);
-    sh.rotation.z = side * 0.12;
+    sh.position.set(0.225 * side, 1.37, 0);
+    sh.add(mesh(new THREE.CapsuleGeometry(0.062, 0.1, 4, 10), shirt, -0.07));
+    sh.add(mesh(new THREE.CapsuleGeometry(0.048, 0.12, 4, 10), skin, -0.2));
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.28;
+    elbow.add(mesh(new THREE.CapsuleGeometry(0.043, 0.15, 4, 10), hands === skin ? skin : hands, -0.1));
+    elbow.add(mesh(new THREE.SphereGeometry(0.048, 12, 10), hands, -0.22));
+    sh.add(elbow);
+    sh.rotation.z = side * 0.1;
     body.add(sh);
-    arms.push(sh);
+    arms.push(sh); elbows.push(elbow);
   }
-  const head = cast(new THREE.Mesh(new THREE.SphereGeometry(0.125, 18, 14), skin));
-  head.position.y = 1.62;
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.13, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), mat(HAIR[Math.floor(Math.random() * HAIR.length)], 0.9));
-  hair.position.y = 1.635;
-  body.add(pants, torso, head, hair);
   if (p.label) {
-    const back = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), new THREE.MeshStandardMaterial({ map: shirtNumber(p.label), transparent: true, roughness: 0.6 }));
-    back.position.set(0, 1.26, -0.15);
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshStandardMaterial({ map: shirtNumber(p.label, p.kind === 'keeper'), transparent: true, roughness: 0.6 }));
+    back.position.set(0, 1.2, -0.14);
     back.rotation.y = Math.PI;
     body.add(back);
   }
   root.scale.setScalar(s);
-
-  const badge = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTexture(p.label ?? '', kit.badge), depthTest: false, transparent: true }));
-  badge.renderOrder = 10;
-  badge.visible = !!p.label;
-  scene.add(badge);
-
-  return { kind: 'player', root, body, legs, arms, badge, phase: Math.random() * 6, yaw: 0, scale: s, last: null };
+  return { kind: 'player', root, body, legs, knees, arms, elbows, phase: Math.random() * 6, yaw: 0, scale: s, last: null };
 }
 
 function ballTexture() {
@@ -583,17 +579,18 @@ function ballTexture() {
 }
 
 function makeThing(p) {
-  const z = p.sz || 1;
+  let z = p.sz || 1;
   const rot = -THREE.MathUtils.degToRad(p.rot || 0);
   let mesh;
   if (p.kind === 'ball') {
-    const r = 0.11 * 1.6 * z;
+    const r = 0.11 * 3 * z; // bigger than life, like the players (Shabo 2026-10-22)
     mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 18), new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.45 }));
     mesh.castShadow = true;
     return { kind: 'ball', root: mesh, r, last: null };
   }
   if (p.kind === 'cone') {
     const g = new THREE.Group();
+    z *= 1.3;
     const cone = new THREE.Mesh(new THREE.ConeGeometry(0.17 * z, 0.42 * z, 18), new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.55, emissive: 0x3a1500 }));
     cone.position.y = 0.21 * z; cone.castShadow = true;
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22 * z, 0.22 * z, 0.03, 18), cone.material);
@@ -679,7 +676,17 @@ function compile(drawing) {
     }
     // A pass alone is quick; runs take longer – roughly like the drawing tool, a little calmer.
     const dur = onlyBall ? THREE.MathUtils.clamp(longest / 7, 0.8, 2.4) : THREE.MathUtils.clamp(longest / 5.2, 1.2, 4.2);
-    steps.push({ note: (st.note || '').trim(), moves, dur });
+    // Where the play is in this step: everything that moves plus the ball, at least 30 × 20 m – the TV camera
+    // follows it like a broadcast camera, so the players stay big (Shabo 2026-10-22).
+    const focus = new THREE.Box3();
+    for (const m of Object.values(moves)) for (const q of m.curve.getSpacedPoints(8)) focus.expandByPoint(q);
+    for (const p of d.pieces) if (p.kind === 'ball') focus.expandByPoint(pos[p.id]);
+    if (!focus.isEmpty()) {
+      const c = focus.getCenter(new THREE.Vector3()), sz = focus.getSize(new THREE.Vector3());
+      focus.expandByVector(new THREE.Vector3(Math.max(0, 30 - sz.x) / 2 + 3, 0, Math.max(0, 20 - sz.z) / 2 + 3));
+      focus.userData = { c };
+    }
+    steps.push({ note: (st.note || '').trim(), moves, dur, focus: focus.isEmpty() ? null : focus });
     for (const [id, m] of Object.entries(moves)) pos[id] = m.curve.getPoint(1);
   }
   // Timeline: a short start, each step followed by a breath, a longer pause before it starts over.
@@ -706,7 +713,7 @@ function snapshot(plan, t) {
         const u = ease(k);
         const at = pm.curve.getPoint(u);
         const tan = pm.curve.getTangent(Math.min(u, 0.999));
-        out[id] = k >= 1 ? m.curve.getPoint(1) : at.add(tan.setY(0).normalize().multiplyScalar(0.75));
+        out[id] = k >= 1 ? m.curve.getPoint(1) : at.add(tan.setY(0).normalize().multiplyScalar(1.2));
       } else if (m.kind === 'ball') {
         out[id] = m.curve.getPoint(easeOut(k));
         if (k > 0 && k < 1 && m.len > 18) lofts[id] = Math.min((m.len - 18) * 0.13, 4.2) * 4 * k * (1 - k);
@@ -758,7 +765,7 @@ function pathGroup(step) {
     const n = Math.max(8, Math.ceil(m.len * 3));
     let pts = m.curve.getSpacedPoints(n);
     const color = m.kind === 'ball' ? 0xffffff : KIT[m.kind]?.run ?? 0xffffff;
-    const w = m.kind === 'ball' ? 0.13 : 0.15;
+    const w = m.kind === 'ball' ? 0.17 : 0.2;
     if (m.style === 'dribble') {
       pts = pts.map((p, i) => {
         const u = i / n;
@@ -844,7 +851,14 @@ function computeFrame() {
 // ───────────────────────────────────────────────────────────── cameras
 let camMode = 'tv';
 const camFrom = new THREE.Vector3(), camTo = new THREE.Vector3(), tgtFrom = new THREE.Vector3(), tgtTo = new THREE.Vector3();
-let camT = 1;
+let camT = 1, camDur = 0.9;
+let focusStep = -1;
+// The step the TV camera should show: the one playing, or the next one during a pause between steps.
+function tvStep() {
+  if (!current?.steps.length) return -1;
+  const i = current.steps.findIndex((s) => t <= s.end);
+  return i >= 0 ? i : current.steps.length - 1;
+}
 
 // The part of the screen not covered by the top bar and the caption/controls (in NDC, -1…1).
 function visibleBand() {
@@ -855,14 +869,13 @@ function visibleBand() {
 }
 const probe = new THREE.PerspectiveCamera();
 // Puts the camera at azimuth az / elevation el so the whole drill fits between the menus, as close as possible.
-function fitPose(az, el) {
-  const { box } = frame;
+function fitPose(az, el, box = frame.box) {
   const pts = [];
   for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) for (const y of [0, 2.2]) pts.push(new THREE.Vector3(x, y, z));
   const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
   probe.fov = camera.fov; probe.aspect = camera.aspect; probe.near = 0.1; probe.far = 3000; probe.updateProjectionMatrix();
   const band = visibleBand();
-  const target = frame.c.clone();
+  const target = box.getCenter(new THREE.Vector3()).setY(0);
   const q = new THREE.Vector3();
   const place = (D) => { probe.position.copy(target).addScaledVector(dir, D); probe.lookAt(target); probe.updateMatrixWorld(); };
   const fits = (D) => {
@@ -891,19 +904,22 @@ function fitPose(az, el) {
   return { pos: probe.position.clone(), tgt: target.clone() };
 }
 
-function camPose(mode) {
+function camPose(mode, step = -1) {
   const portrait = camera.aspect < 1;
+  const focus = step >= 0 ? current.steps[step]?.focus : null;
   if (mode === 'top') return fitPose(portrait ? Math.PI / 2 : 0, Math.PI / 2 - 0.0015);
   if (mode === 'goal') return fitPose(Math.PI / 2, 0.42);
   // TV: from the main stand; on a phone held upright, a little from the side so the pitch fills the screen.
-  return fitPose(portrait ? 0.62 : 0, portrait ? 0.62 : 0.5);
+  return fitPose(portrait ? 0.62 : 0, portrait ? 0.5 : 0.45, focus ?? frame.box);
 }
 
 function setCamera(mode, animate = true) {
   camMode = mode;
   document.querySelectorAll('.cams button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === mode)));
   if (mode === 'follow') { camT = 1; return; }
-  const pose = camPose(mode);
+  focusStep = mode === 'tv' ? tvStep() : -1;
+  const pose = camPose(mode, focusStep);
+  camDur = 0.9;
   if (!animate || reduceMotion) {
     camera.position.copy(pose.pos); controls.target.copy(pose.tgt); camT = 1; controls.update(); return;
   }
@@ -952,14 +968,13 @@ function render(dt, jump = false) {
       th.phase += dt * (4 + speedMs * 1.5);
       const sw = Math.sin(th.phase) * 0.75 * amp;
       th.legs[0].rotation.x = sw; th.legs[1].rotation.x = -sw;
+      // Knees bend as the leg swings back, elbows bend when running – like a real stride.
+      th.knees[0].rotation.x = (0.12 + Math.max(0, sw) * 1.4) * amp;
+      th.knees[1].rotation.x = (0.12 + Math.max(0, -sw) * 1.4) * amp;
       th.arms[0].rotation.x = -sw * 0.8; th.arms[1].rotation.x = sw * 0.8;
+      th.elbows[0].rotation.x = th.elbows[1].rotation.x = -(0.15 + 0.85 * amp);
       th.body.position.y = Math.abs(Math.sin(th.phase)) * 0.05 * amp + Math.sin(th.phase * 0.35) * 0.006;
       th.body.rotation.x = 0.12 * amp;
-      // Number badge above the head, readable from any distance.
-      th.badge.position.set(p.x, 2.12 * th.scale, p.z);
-      const dcam = camera.position.distanceTo(th.badge.position);
-      th.badge.scale.setScalar(THREE.MathUtils.clamp(dcam * 0.03, 0.55, 2.8));
-      th.badge.material.opacity = THREE.MathUtils.clamp((dcam - 6) / 8, 0, 1); // up close you see the shirt instead
     } else {
       th.root.position.set(p.x, 0, p.z);
     }
@@ -1040,10 +1055,18 @@ function loop(now) {
   }
   render(dt);
   if (camT < 1) {
-    camT = Math.min(1, camT + dt / 0.9);
+    camT = Math.min(1, camT + dt / camDur);
     const k = camT < 0.5 ? 4 * camT ** 3 : 1 - (-2 * camT + 2) ** 3 / 2;
     camera.position.lerpVectors(camFrom, camTo, k);
     controls.target.lerpVectors(tgtFrom, tgtTo, k);
+  } else if (camMode === 'tv' && current.steps.length && tvStep() !== focusStep && current.steps[tvStep()]?.focus) {
+    // A new step: glide to where the play is now.
+    focusStep = tvStep();
+    const pose = camPose('tv', focusStep);
+    camFrom.copy(camera.position); tgtFrom.copy(controls.target);
+    camTo.copy(pose.pos); tgtTo.copy(pose.tgt);
+    camDur = 1.4; camT = reduceMotion ? 1 : 0;
+    if (reduceMotion) { camera.position.copy(pose.pos); controls.target.copy(pose.tgt); }
   } else if (camMode === 'follow' && ballIds.length) {
     const b = things[ballIds[0]].root.position;
     const want = tmp.set(b.x, 0, b.z);
