@@ -151,7 +151,7 @@ body.app .close { display: grid; place-items: center; flex-shrink: 0; }
   <button class="close" id="close" aria-label="Stäng 3D">×</button>
 </header>
 <div class="owner"><span id="owner"></span></div>
-<div class="hint" id="hint">Dra för att vrida · nyp för att zooma</div>
+<div class="hint" id="hint">Dra för att vrida · nyp för att zooma · tryck på en spelare för att följa</div>
 
 <section class="dock" aria-label="Uppspelning">
   <div class="caption" aria-live="polite"><div class="step" id="stepBadge"><small>Steg</small><span id="stepNo">Start</span></div><div class="note"><span id="note"></span></div></div>
@@ -208,12 +208,15 @@ document.getElementById('close').addEventListener('click', () => {
   else history.back();
 });
 if (!DRAWINGS.length) { window.__fail('Det finns ingen övning att visa i 3D. Stäng och tryck på 3D igen.'); throw new Error('no drawing'); }
-const FIELD = { full: { w: 105, h: 68 }, half: { w: 52.5, h: 68 }, area: { w: 40, h: 30 } };
+// p9/p7: the 9 and 7 a side pitches of formations and game plans (Shabo 2026-10-25: "3D … exakt som på övningarna").
+const FIELD = { full: { w: 105, h: 68 }, half: { w: 52.5, h: 68 }, area: { w: 40, h: 30 }, p9: { w: 70, h: 45.3 }, p7: { w: 52, h: 33.7 } };
 const KIT = {
   team: { shirt: 0x1f5fae, shorts: 0x1d2433, socks: 0x1f5fae, badge: '#1F5FAE', run: 0x8ec5ff },
   opp: { shirt: 0xd23b3b, shorts: 0xffffff, socks: 0xd23b3b, badge: '#D23B3B', run: 0xff9c9c },
   keeper: { shirt: 0xf2c14e, shorts: 0x1d2433, socks: 0xf2c14e, badge: '#E0A92E', run: 0xffe08a },
+  okeeper: { shirt: 0x8e5cf7, shorts: 0x1d2433, socks: 0x8e5cf7, badge: '#8E5CF7', run: 0xc9b0ff },
 };
+const PLAYER_KINDS = new Set(['team', 'opp', 'keeper', 'okeeper']);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobile = window.matchMedia('(pointer: coarse)').matches;
 
@@ -306,6 +309,7 @@ function pitchTexture(field) {
     g.strokeRect(0.3, 0.3, F.w - 0.6, F.h - 0.6);
   } else {
     if (field === 'half') g.translate(-52.5, 0);
+    else if (F.w !== 105) { const k = F.w / 105; g.scale(k, k); g.lineWidth = 0.12 / k; } // 9 and 7 a side: the same lines, smaller
     g.beginPath(); g.rect(0.5, 0.5, 104, 67); g.stroke();
     g.beginPath(); g.moveTo(52.5, 0.5); g.lineTo(52.5, 67.5); g.stroke();
     g.beginPath(); g.arc(52.5, 34, 9.15, 0, Math.PI * 2); g.stroke();
@@ -399,12 +403,13 @@ function buildArena(field, pieces) {
 
   // Goals that belong to the pitch itself (unless the drawing already has a goal there).
   if (big) {
-    const ends = field === 'full' ? [[0.5, 180], [104.5, 0]] : [[52, 0]];
+    const small = field === 'p9' || field === 'p7'; // youth goals: 5 × 2 m
+    const ends = field === 'half' ? [[52, 0]] : [[small ? 0.3 : 0.5, 180], [small ? F.w - 0.3 : 104.5, 0]];
     for (const [gx, rot] of ends) {
-      const taken = pieces.some((p) => p.kind === 'goal' && Math.abs(p.x - gx) < 4 && Math.abs(p.y - 34) < 6);
+      const taken = pieces.some((p) => p.kind === 'goal' && Math.abs(p.x - gx) < 4 && Math.abs(p.y - F.h / 2) < 6);
       if (taken) continue;
-      const goal = makeGoal(7.32, 2.44, 2, 0.06);
-      goal.position.copy(toWorld(gx, 34, field));
+      const goal = small ? makeGoal(5, 2, 1.5, 0.05) : makeGoal(7.32, 2.44, 2, 0.06);
+      goal.position.copy(toWorld(gx, F.h / 2, field));
       goal.rotation.y = -THREE.MathUtils.degToRad(rot);
       arena.add(goal);
     }
@@ -420,7 +425,7 @@ function buildArena(field, pieces) {
       { len: F.w + 8, x: 0, z: F.h / 2 + 5.5, ry: Math.PI },
       { len: F.h + 8, x: F.w / 2 + 6, z: 0, ry: -Math.PI / 2 },
     ];
-    if (field === 'full') sides.push({ len: F.h + 8, x: -(F.w / 2 + 6), z: 0, ry: Math.PI / 2 });
+    if (field !== 'half') sides.push({ len: F.h + 8, x: -(F.w / 2 + 6), z: 0, ry: Math.PI / 2 });
     for (const s of sides) {
       const t = tex.clone(); t.needsUpdate = true; t.repeat.set(s.len / 22, 1);
       const m = mat.clone(); m.map = t; m.emissiveMap = t;
@@ -501,7 +506,7 @@ function makePlayer(p) {
   const mat = (color, rough = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: rough });
   const shirt = mat(kit.shirt, 0.55), shorts = mat(kit.shorts, 0.6), socks = mat(kit.socks, 0.7), skin = mat(SKIN, 0.75);
   const boot = mat(0x121212, 0.35), stripe = mat(0xffffff, 0.6);
-  const hands = p.kind === 'keeper' ? mat(0xf4f4f4, 0.5) : skin;
+  const hands = p.kind === 'keeper' || p.kind === 'okeeper' ? mat(0xf4f4f4, 0.5) : skin;
   const cast = (m) => { m.castShadow = true; return m; };
   const mesh = (geo, m, y = 0, z = 0) => { const o = cast(new THREE.Mesh(geo, m)); o.position.set(0, y, z); return o; };
 
@@ -621,15 +626,33 @@ function makeThing(p) {
     g.rotation.y = rot;
     return { kind: 'static', root: g };
   }
-  if (p.kind === 'zone') {
-    const w = (p.w || 12) * z, h = (p.h || 8) * z;
+  if (p.kind === 'zone' || p.kind === 'tri') {
+    const w = (p.w || 12) * z, h = (p.h || (p.kind === 'tri' ? 10 : 8)) * z;
+    const color = new THREE.Color(p.color || '#FFD666');
+    // A triangle points at -y on the board (towards the other goal once turned), like the 2D board.
+    const shape = p.kind === 'tri' ? new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(0, h / 2), new THREE.Vector2(w / 2, -h / 2), new THREE.Vector2(-w / 2, -h / 2)])) : new THREE.PlaneGeometry(w, h);
     const g = new THREE.Group();
-    const fillM = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffd666, transparent: true, opacity: 0.16, depthWrite: false }));
+    const fillM = new THREE.Mesh(shape, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     fillM.rotation.x = -Math.PI / 2; fillM.position.y = 0.04;
-    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h)), new THREE.LineDashedMaterial({ color: 0xffd666, dashSize: 0.8, gapSize: 0.6, transparent: true, opacity: 0.95 }));
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(shape), new THREE.LineDashedMaterial({ color, dashSize: 0.8, gapSize: 0.6, transparent: true, opacity: 0.95 }));
     edge.computeLineDistances(); edge.rotation.x = -Math.PI / 2; edge.position.y = 0.05;
     g.add(fillM, edge);
     g.rotation.y = rot;
+    return { kind: 'static', root: g };
+  }
+  if (p.kind === 'arrow') {
+    // A drawn arrow (formations and game plans): solid = pass, dashed = run, flat on the grass from (x, y) to (x2, y2).
+    const end = new THREE.Vector3((p.x2 ?? p.x) - p.x, 0, (p.y2 ?? p.y) - p.y);
+    const len = end.length();
+    if (len < 0.5) return null;
+    const color = new THREE.Color(p.color || '#FFFFFF');
+    const dir = end.clone().normalize();
+    const g = new THREE.Group();
+    const stop = end.clone().addScaledVector(dir, -0.5);
+    if (p.dashed) {
+      for (let d = 0; d < len - 0.6; d += 1.75) g.add(ribbon([dir.clone().multiplyScalar(d), dir.clone().multiplyScalar(Math.min(d + 1.1, len - 0.6))], 0.2, color, 0.92));
+    } else g.add(ribbon([new THREE.Vector3(), stop], 0.2, color, 0.92));
+    g.add(arrowHead(end, dir, 0.7, color, 0.95));
     return { kind: 'static', root: g };
   }
   if (p.kind === 'ring') {
@@ -811,7 +834,7 @@ function load(index) {
   current = compile(DRAWINGS[index]);
   buildArena(current.field, current.drawing.diagram.pieces);
   for (const p of current.drawing.diagram.pieces) {
-    const th = p.kind === 'team' || p.kind === 'opp' || p.kind === 'keeper' ? makePlayer(p) : makeThing(p);
+    const th = PLAYER_KINDS.has(p.kind) ? makePlayer(p) : makeThing(p);
     if (!th) continue;
     th.root.position.copy(toWorld(p.x, p.y, current.field));
     if (th.kind === 'ball') { th.root.position.y = th.r; ballIds.push(p.id); }
@@ -913,8 +936,9 @@ function camPose(mode, step = -1) {
   return fitPose(portrait ? 0.62 : 0, portrait ? 0.5 : 0.45, focus ?? frame.box);
 }
 
-function setCamera(mode, animate = true) {
+function setCamera(mode, animate = true, player = null) {
   camMode = mode;
+  followId = mode === 'follow' ? player : null;
   document.querySelectorAll('.cams button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === mode)));
   if (mode === 'follow') { camT = 1; return; }
   focusStep = mode === 'tv' ? tvStep() : -1;
@@ -1054,6 +1078,9 @@ function loop(now) {
     }
   }
   render(dt);
+  const followed = things[followId];
+  followRing.visible = !!followed && camMode === 'follow';
+  if (followed) followRing.position.set(followed.root.position.x, 0.06, followed.root.position.z);
   if (camT < 1) {
     camT = Math.min(1, camT + dt / camDur);
     const k = camT < 0.5 ? 4 * camT ** 3 : 1 - (-2 * camT + 2) ** 3 / 2;
@@ -1067,8 +1094,8 @@ function loop(now) {
     camTo.copy(pose.pos); tgtTo.copy(pose.tgt);
     camDur = 1.4; camT = reduceMotion ? 1 : 0;
     if (reduceMotion) { camera.position.copy(pose.pos); controls.target.copy(pose.tgt); }
-  } else if (camMode === 'follow' && ballIds.length) {
-    const b = things[ballIds[0]].root.position;
+  } else if (camMode === 'follow' && (things[followId] || ballIds.length)) {
+    const b = (things[followId] ?? things[ballIds[0]]).root.position;
     const want = tmp.set(b.x, 0, b.z);
     controls.target.lerp(want, Math.min(1, dt * 3));
     const az = camera.aspect < 1 ? 0.62 : 0;
@@ -1244,6 +1271,43 @@ scrub.addEventListener('touchend', endScrub);
 
 let hintTimer = setTimeout(hideHint, 5000);
 function hideHint() { clearTimeout(hintTimer); document.getElementById('hint').classList.add('gone'); }
+function flash(text) {
+  const h = document.getElementById('hint');
+  h.textContent = text;
+  h.classList.remove('gone');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(hideHint, 2600);
+}
+
+// Tap a player and the camera follows just that player – good for showing a young player exactly what to do
+// (Shabo 2026-10-25). A drag still turns the camera; "Följ" follows the ball again.
+let followId = null;
+const followRing = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.15, 40), new THREE.MeshBasicMaterial({ color: 0xffd24d, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }));
+followRing.rotation.x = -Math.PI / 2;
+followRing.visible = false;
+scene.add(followRing);
+let tapStart = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { tapStart = { x: e.clientX, y: e.clientY, at: performance.now() }; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const s = tapStart;
+  tapStart = null;
+  if (!s || Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8 || performance.now() - s.at > 450) return;
+  // The player nearest the finger, measured on the screen around chest height.
+  const r = renderer.domElement.getBoundingClientRect();
+  let best = null, bestD = 46;
+  for (const [id, th] of Object.entries(things)) {
+    if (th.kind !== 'player') continue;
+    const q = th.root.position.clone().setY(1.0 * th.scale).project(camera);
+    if (q.z > 1) continue;
+    const d = Math.hypot((q.x + 1) / 2 * r.width + r.left - e.clientX, (1 - q.y) / 2 * r.height + r.top - e.clientY);
+    if (d < bestD) { best = id; bestD = d; }
+  }
+  if (!best) return;
+  setCamera('follow', true, best);
+  const p = current.drawing.diagram.pieces.find((x) => x.id === best);
+  const who = p?.kind === 'opp' ? 'motståndare ' : p?.kind === 'keeper' || p?.kind === 'okeeper' ? 'målvakt ' : '';
+  flash(`Följer ${who}${p?.label || 'spelaren'} · tryck Följ för bollen`);
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
