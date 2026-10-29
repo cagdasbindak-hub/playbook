@@ -637,10 +637,13 @@ function makeThing(p) {
   if (p.kind === 'zone' || p.kind === 'tri') {
     const w = (p.w || 12) * z, h = (p.h || (p.kind === 'tri' ? 10 : 8)) * z;
     const color = new THREE.Color(p.color || '#FFD666');
-    // A triangle points at -y on the board (towards the other goal once turned), like the 2D board; its corners can be
-    // dragged to any shape (Shabo 2026-10-29) – board metres around (x, y), so y flips here like the standard one.
-    const corners = p.kind === 'tri' && p.corners?.length === 3 ? p.corners.map((q) => new THREE.Vector2(q.x * z, -q.y * z)) : [new THREE.Vector2(0, h / 2), new THREE.Vector2(w / 2, -h / 2), new THREE.Vector2(-w / 2, -h / 2)];
-    const shape = p.kind === 'tri' ? new THREE.ShapeGeometry(new THREE.Shape(corners)) : new THREE.PlaneGeometry(w, h);
+    // A triangle points at -y on the board (towards the other goal once turned), like the 2D board. Corners dragged to
+    // any shape (Shabo 2026-10-29, triangles and squares) are board metres around (x, y), so y flips here too.
+    const n = p.kind === 'tri' ? 3 : 4;
+    const corners = p.corners?.length === n ? p.corners.map((q) => new THREE.Vector2(q.x * z, -q.y * z)) : null;
+    const shape = corners
+      ? new THREE.ShapeGeometry(new THREE.Shape(corners))
+      : p.kind === 'tri' ? new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(0, h / 2), new THREE.Vector2(w / 2, -h / 2), new THREE.Vector2(-w / 2, -h / 2)])) : new THREE.PlaneGeometry(w, h);
     const g = new THREE.Group();
     const fillM = new THREE.Mesh(shape, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     fillM.rotation.x = -Math.PI / 2; fillM.position.y = 0.04;
