@@ -36,8 +36,9 @@
 <style>
   body { background: #F3F6F9; }
   @media (prefers-color-scheme: dark) { body { background: #0C121C; } }
-  /* Laptop / desktop: show the app in a phone-sized frame. */
-  @media (min-width: 700px) and (min-height: 640px) {
+  /* A tablet held upright: the phone app in a phone-sized frame. From 1024 px wide (WIDE_MIN in
+     src/hooks/use-wide.ts) the app has its own computer layout and fills the window (Shabo 2026-10-29). */
+  @media (min-width: 700px) and (max-width: 1023.98px) and (min-height: 640px) {
     body { background: radial-gradient(circle at 30% 20%, #2A6FA5 0%, #154C79 45%, #0B2A45 100%); display: flex; align-items: center; justify-content: center; }
     #root { flex: none !important; width: 400px; height: min(860px, calc(100vh - 48px)) !important; border-radius: 36px; overflow: hidden;
       box-shadow: 0 0 0 10px #0C121C, 0 0 0 12px rgba(255,255,255,0.08), 0 30px 80px rgba(0,0,0,0.55); transform: translateZ(0); }
@@ -52,6 +53,6 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/playbook/_expo/static/js/web/index-8c4b951cde0b38dc3adbfafc2f3b103a.js" defer></script>
+  <script src="/playbook/_expo/static/js/web/index-e9b5807d5b9832ac66b8199e9df5d954.js" defer></script>
 </body>
 </html>
