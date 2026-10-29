@@ -846,6 +846,8 @@ function load(index) {
     if (!th) continue;
     th.root.position.copy(toWorld(p.x, p.y, current.field));
     if (th.kind === 'ball') { th.root.position.y = th.r; ballIds.push(p.id); }
+    // A drawn arrow belongs to the step it was drawn in (Shabo 2026-10-28); 0 = the start.
+    if (p.kind === 'arrow') th.step = p.step ?? 0;
     scene.add(th.root);
     things[p.id] = th;
   }
@@ -1018,6 +1020,9 @@ function render(dt, jump = false) {
   const nextIdx = current.steps.findIndex((s) => t < s.start);
   const idx = snap.active >= 0 && t <= current.steps[snap.active].end ? snap.active : nextIdx >= 0 ? nextIdx : showIdx;
   paths.forEach((g, i) => (g.visible = i === idx));
+  // Drawn arrows: the start's before the first step, then each step's from when it starts until the next one does.
+  const arrowsAt = snap.active >= 0 && t >= current.steps[snap.active].start ? snap.active + 1 : 0;
+  for (const th of Object.values(things)) if (th.step !== undefined) th.root.visible = th.step === arrowsAt;
   updateCaption(snap, idx);
 }
 
