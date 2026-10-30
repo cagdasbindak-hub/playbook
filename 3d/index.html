@@ -699,6 +699,8 @@ function compile(drawing) {
   const kinds = Object.fromEntries(d.pieces.map((p) => [p.id, p.kind]));
   // A piece put on the pitch in a step (Shabo 2026-10-29) stands where it was placed then and moves from the next one.
   const from = Object.fromEntries(d.pieces.map((p) => [p.id, p.kind === 'arrow' ? 0 : p.from || 0]));
+  // Taken off in a step (Shabo 2026-10-30): gone from that step on.
+  const until = Object.fromEntries(d.pieces.map((p) => [p.id, p.kind === 'arrow' ? Infinity : p.until ?? Infinity]));
   const steps = [];
   let si = 0;
   for (const st of d.steps) {
@@ -706,7 +708,7 @@ function compile(drawing) {
     const moves = {};
     let longest = 0, onlyBall = true;
     for (const [id, m] of Object.entries(st.moves || {})) {
-      if (!pos[id] || !m.pts?.length || from[id] >= si) continue;
+      if (!pos[id] || !m.pts?.length || from[id] >= si || si >= until[id]) continue;
       const pts = [pos[id].clone(), ...m.pts.map((q) => toWorld(q.x, q.y, field))];
       const curve = makeCurve(pts);
       const len = curve.getLength();
@@ -720,7 +722,7 @@ function compile(drawing) {
     // follows it like a broadcast camera, so the players stay big (Shabo 2026-10-22).
     const focus = new THREE.Box3();
     for (const m of Object.values(moves)) for (const q of m.curve.getSpacedPoints(8)) focus.expandByPoint(q);
-    for (const p of d.pieces) if (p.kind === 'ball' && from[p.id] <= si) focus.expandByPoint(pos[p.id]);
+    for (const p of d.pieces) if (p.kind === 'ball' && from[p.id] <= si && si < until[p.id]) focus.expandByPoint(pos[p.id]);
     if (!focus.isEmpty()) {
       const c = focus.getCenter(new THREE.Vector3()), sz = focus.getSize(new THREE.Vector3());
       focus.expandByVector(new THREE.Vector3(Math.max(0, 30 - sz.x) / 2 + 3, 0, Math.max(0, 20 - sz.z) / 2 + 3));
@@ -858,7 +860,10 @@ function load(index) {
     // A drawn arrow belongs to the step it was drawn in (Shabo 2026-10-28); 0 = the start.
     if (p.kind === 'arrow') th.step = p.step ?? 0;
     // Anything else put on the pitch in a step comes on as that step starts (Shabo 2026-10-29).
-    else if (p.from) th.from = p.from;
+    else {
+      if (p.from) th.from = p.from;
+      if (p.until) th.until = p.until;
+    }
     scene.add(th.root);
     things[p.id] = th;
   }
@@ -1034,7 +1039,12 @@ function render(dt, jump = false) {
   // Drawn arrows: the start's before the first step, then each step's from when it starts until the next one does.
   const arrowsAt = snap.active >= 0 && t >= current.steps[snap.active].start ? snap.active + 1 : 0;
   for (const th of Object.values(things)) if (th.step !== undefined) th.root.visible = th.step === arrowsAt;
-  for (const th of Object.values(things)) if (th.from) th.root.visible = !current.steps[th.from - 1] || t >= current.steps[th.from - 1].start;
+  for (const th of Object.values(things)) {
+    if (!th.from && !th.until) continue;
+    const on = !th.from || !current.steps[th.from - 1] || t >= current.steps[th.from - 1].start;
+    const off = !!th.until && !!current.steps[th.until - 1] && t >= current.steps[th.until - 1].start;
+    th.root.visible = on && !off;
+  }
   updateCaption(snap, idx);
 }
 
